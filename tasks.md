@@ -31,13 +31,12 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
   - Include Tailwind CSS
   - Include ESLint
 
-- [ ] **0.2** Set up Neon DB
+- [x] **0.2** Set up Neon DB
 
   - Create Neon account
   - Create new database project
   - Get connection string
   - Create `.env` file with `DATABASE_URL`
-  - **Status:** Waiting for user to set up Neon DB account and add connection string
 
 - [x] **0.3** Install and configure Prisma
 
