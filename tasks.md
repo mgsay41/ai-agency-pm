@@ -20,7 +20,7 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
 
 ### Tasks:
 
-- [ ] **0.1** Create Next.js project with TypeScript
+- [x] **0.1** Create Next.js project with TypeScript
 
   ```bash
   npx create-next-app@latest ai-agency-pm --typescript --tailwind --app --eslint
@@ -36,9 +36,10 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
   - Create Neon account
   - Create new database project
   - Get connection string
-  - Create `.env.local` file with `DATABASE_URL`
+  - Create `.env` file with `DATABASE_URL`
+  - **Status:** Waiting for user to set up Neon DB account and add connection string
 
-- [ ] **0.3** Install and configure Prisma
+- [x] **0.3** Install and configure Prisma
 
   ```bash
   npm install prisma @prisma/client
@@ -48,7 +49,7 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
   - Update `schema.prisma` with Neon DB config
   - Create `lib/db.ts` for Prisma client singleton
 
-- [ ] **0.4** Install core dependencies
+- [x] **0.4** Install core dependencies
 
   ```bash
   npm install better-auth date-fns zod react-hook-form @hookform/resolvers
@@ -56,7 +57,7 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
   npm install -D @types/node
   ```
 
-- [ ] **0.5** Set up shadcn/ui
+- [x] **0.5** Set up shadcn/ui
 
   ```bash
   npx shadcn-ui@latest init
@@ -65,13 +66,13 @@ This document breaks down Phase 1 into **10 small phases** that can be developed
   - Configure with minimal theme
   - Set up custom colors (neutrals)
 
-- [ ] **0.6** Configure project structure
+- [x] **0.6** Configure project structure
 
   - Create folder structure as per PRD
   - Set up path aliases in `tsconfig.json`
   - Create `lib/utils.ts` helper file
 
-- [ ] **0.7** Set up Git repository
+- [x] **0.7** Set up Git repository
   - Initialize git
   - Create `.gitignore` (exclude `.env.local`)
   - Initial commit
