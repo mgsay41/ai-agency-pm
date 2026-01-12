@@ -9,7 +9,20 @@
       "Bash(npm install:*)",
       "Bash(npx prisma:*)",
       "Bash(npx shadcn@latest init)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(timeout /t 3)",
+      "Bash(if not exist \"app\\\\api\\\\auth\" mkdir \"app\\\\api\\\\auth\")",
+      "Bash(cmd /c \"if not exist app\\\\api\\\\auth\\\\[...better-auth] mkdir app\\\\api\\\\auth\\\\[...better-auth]\")",
+      "Bash(npx shadcn:*)",
+      "Bash(cmd /c \"if not exist app\\\\\\\\\\(auth\\)\\\\login mkdir app\\\\\\\\\\(auth\\)\\\\login\")",
+      "Bash(cmd /c \"if not exist app\\\\\\\\\\(auth\\)\\\\register mkdir app\\\\\\\\\\(auth\\)\\\\register\")",
+      "Bash(npm run dev:*)",
+      "Bash(timeout /t 5)",
+      "Bash(npm run build:*)",
+      "Bash(timeout /t 1)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /F /PID 29656\")",
+      "Bash(cmd /c \"if not exist app\\\\\\\\\\(dashboard\\) mkdir app\\\\\\\\\\(dashboard\\)\")"
     ]
   }
 }
