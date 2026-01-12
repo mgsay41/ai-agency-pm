@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,14 +7,436 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================================================
-// ENUMS
-// ============================================================================
+model Account {
+  id           String    @id
+  userId       String
+  accountId    String
+  providerId   String
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  expiresAt    DateTime?
+  password     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  User         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-enum Role {
-  ADMIN
-  TEAM_MEMBER
-  CLIENT
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model ActionItem {
+  id          String           @id
+  meetingId   String
+  description String
+  assignedTo  String?
+  dueDate     DateTime?
+  status      ActionItemStatus @default(OPEN)
+  completedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime
+  TeamMember  TeamMember?      @relation(fields: [assignedTo], references: [id])
+  Meeting     Meeting          @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+
+  @@index([meetingId])
+  @@index([status])
+}
+
+model ActivityLog {
+  id         String   @id
+  userId     String
+  entityType String
+  entityId   String
+  action     String
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  User       User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([entityType, entityId])
+  @@index([userId])
+}
+
+model Client {
+  id                     String          @id
+  clientType             ClientType
+  companyName            String
+  industry               String?
+  companySize            String?
+  website                String?
+  billingAddress         String?
+  timeZone               String?
+  preferredCommunication Json?
+  tags                   Json?
+  notes                  String?
+  isActive               Boolean         @default(true)
+  clientSince            DateTime?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime
+  createdBy              String?
+  User                   User?           @relation(fields: [createdBy], references: [id])
+  ClientContact          ClientContact[]
+  Project                Project[]
+
+  @@index([companyName])
+  @@index([isActive])
+}
+
+model ClientContact {
+  id          String   @id
+  clientId    String
+  isPrimary   Boolean  @default(false)
+  contactName String
+  jobTitle    String?
+  email       String
+  phone       String?
+  mobile      String?
+  linkedinUrl String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime
+  Client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([email])
+}
+
+model Document {
+  id          String   @id
+  projectId   String
+  fileName    String
+  filePath    String
+  fileType    String?
+  fileSize    BigInt?
+  category    String?
+  description String?
+  version     String?
+  uploadedBy  String
+  uploadedAt  DateTime @default(now())
+  isDeleted   Boolean  @default(false)
+  Project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  User        User     @relation(fields: [uploadedBy], references: [id])
+
+  @@index([projectId])
+}
+
+model Meeting {
+  id               String            @id
+  projectId        String
+  meetingDate      DateTime
+  durationMinutes  Int?
+  meetingType      MeetingType
+  locationPlatform String?
+  agenda           String?
+  notes            String?
+  transcript       String?
+  recordingUrl     String?
+  nextMeetingDate  DateTime?
+  nextMeetingNotes String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime
+  createdBy        String?
+  ActionItem       ActionItem[]
+  User             User?             @relation(fields: [createdBy], references: [id])
+  Project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  MeetingAttendee  MeetingAttendee[]
+
+  @@index([meetingDate])
+  @@index([projectId])
+}
+
+model MeetingAttendee {
+  id            String       @id
+  meetingId     String
+  memberId      String?
+  externalName  String?
+  externalEmail String?
+  attendeeType  AttendeeType
+  attended      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  Meeting       Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  TeamMember    TeamMember?  @relation(fields: [memberId], references: [id])
+
+  @@index([meetingId])
+}
+
+model Milestone {
+  id          String          @id
+  projectId   String
+  name        String
+  description String?
+  targetDate  DateTime
+  actualDate  DateTime?
+  status      MilestoneStatus @default(PENDING)
+  orderIndex  Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime
+  Project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Task        Task[]
+
+  @@index([projectId])
+}
+
+model Project {
+  id                                String              @id
+  projectName                       String
+  projectCode                       String?             @unique
+  clientId                          String
+  projectType                       ProjectType
+  description                       String?
+  internalNotes                     String?
+  status                            ProjectStatus       @default(PLANNING)
+  priority                          Priority            @default(MEDIUM)
+  startDate                         DateTime
+  endDate                           DateTime
+  actualStartDate                   DateTime?
+  actualEndDate                     DateTime?
+  estimatedHours                    Decimal?            @db.Decimal(10, 2)
+  budgetAmount                      Decimal?            @db.Decimal(12, 2)
+  currency                          String              @default("USD")
+  billingType                       BillingType?
+  progressPercentage                Int                 @default(0)
+  currentPhase                      String?
+  healthStatus                      HealthStatus?
+  isArchived                        Boolean             @default(false)
+  archivedAt                        DateTime?
+  createdAt                         DateTime            @default(now())
+  updatedAt                         DateTime
+  createdBy                         String
+  lastModifiedBy                    String?
+  Document                          Document[]
+  Meeting                           Meeting[]
+  Milestone                         Milestone[]
+  Client                            Client              @relation(fields: [clientId], references: [id])
+  User_Project_createdByToUser      User                @relation("Project_createdByToUser", fields: [createdBy], references: [id])
+  User_Project_lastModifiedByToUser User?               @relation("Project_lastModifiedByToUser", fields: [lastModifiedBy], references: [id])
+  ProjectAssignment                 ProjectAssignment[]
+  ProjectExpense                    ProjectExpense[]
+  Task                              Task[]
+  TimeEntry                         TimeEntry[]
+
+  @@index([clientId])
+  @@index([createdBy])
+  @@index([endDate])
+  @@index([priority])
+  @@index([startDate])
+  @@index([status])
+}
+
+model ProjectAssignment {
+  id                   String     @id
+  projectId            String
+  memberId             String
+  roleInProject        String
+  allocationPercentage Int        @default(100)
+  startDate            DateTime?
+  endDate              DateTime?
+  isActive             Boolean    @default(true)
+  notes                String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime
+  TeamMember           TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  Project              Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId, roleInProject])
+  @@index([memberId])
+  @@index([projectId])
+}
+
+model ProjectExpense {
+  id          String        @id
+  projectId   String
+  category    String?
+  description String
+  amount      Decimal       @db.Decimal(12, 2)
+  currency    String        @default("USD")
+  expenseDate DateTime
+  receiptUrl  String?
+  isBillable  Boolean       @default(true)
+  submittedBy String
+  approvedBy  String?
+  status      ExpenseStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime
+  User        User?         @relation(fields: [approvedBy], references: [id])
+  Project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  TeamMember  TeamMember    @relation(fields: [submittedBy], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  token     String   @unique
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model SystemSetting {
+  id           String   @id
+  settingKey   String   @unique
+  settingValue String?
+  settingType  String?
+  description  String?
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime
+}
+
+model Task {
+  id             String      @id
+  projectId      String
+  milestoneId    String?
+  assignedTo     String?
+  title          String
+  description    String?
+  status         TaskStatus  @default(BACKLOG)
+  priority       Priority    @default(MEDIUM)
+  estimatedHours Decimal?    @db.Decimal(10, 2)
+  actualHours    Decimal?    @db.Decimal(10, 2)
+  dueDate        DateTime?
+  completedAt    DateTime?
+  parentTaskId   String?
+  orderIndex     Int?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime
+  createdBy      String?
+  TeamMember     TeamMember? @relation(fields: [assignedTo], references: [id])
+  User           User?       @relation(fields: [createdBy], references: [id])
+  Milestone      Milestone?  @relation(fields: [milestoneId], references: [id])
+  Task           Task?       @relation("TaskToTask", fields: [parentTaskId], references: [id])
+  other_Task     Task[]      @relation("TaskToTask")
+  Project        Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  TimeEntry      TimeEntry[]
+
+  @@index([assignedTo])
+  @@index([projectId])
+  @@index([status])
+}
+
+model TeamMember {
+  id                              String              @id
+  userId                          String?             @unique
+  fullName                        String
+  email                           String              @unique
+  phone                           String?
+  roleTitle                       String
+  department                      Department?
+  specialization                  Json?
+  skills                          Json?
+  hourlyRate                      Decimal?            @db.Decimal(10, 2)
+  currency                        String              @default("USD")
+  employmentType                  EmploymentType?
+  startDate                       DateTime?
+  status                          MemberStatus        @default(ACTIVE)
+  avatarColor                     String?
+  bio                             String?
+  linkedinUrl                     String?
+  githubUrl                       String?
+  createdAt                       DateTime            @default(now())
+  updatedAt                       DateTime
+  createdBy                       String?
+  ActionItem                      ActionItem[]
+  MeetingAttendee                 MeetingAttendee[]
+  ProjectAssignment               ProjectAssignment[]
+  ProjectExpense                  ProjectExpense[]
+  Task                            Task[]
+  User_TeamMember_createdByToUser User?               @relation("TeamMember_createdByToUser", fields: [createdBy], references: [id])
+  User_TeamMember_userIdToUser    User?               @relation("TeamMember_userIdToUser", fields: [userId], references: [id])
+  TimeEntry                       TimeEntry[]
+
+  @@index([department])
+  @@index([email])
+  @@index([status])
+}
+
+model TimeEntry {
+  id          String     @id
+  projectId   String
+  taskId      String?
+  memberId    String
+  workDate    DateTime
+  hours       Decimal    @db.Decimal(10, 2)
+  description String?
+  isBillable  Boolean    @default(true)
+  hourlyRate  Decimal?   @db.Decimal(10, 2)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime
+  TeamMember  TeamMember @relation(fields: [memberId], references: [id])
+  Project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Task        Task?      @relation(fields: [taskId], references: [id])
+
+  @@index([memberId])
+  @@index([projectId])
+  @@index([workDate])
+}
+
+model User {
+  id                                    String           @id
+  email                                 String           @unique
+  role                                  Role             @default(TEAM_MEMBER)
+  phone                                 String?
+  isActive                              Boolean          @default(true)
+  lastLogin                             DateTime?
+  createdAt                             DateTime         @default(now())
+  updatedAt                             DateTime
+  createdBy                             String?
+  emailVerified                         Boolean          @default(false)
+  name                                  String
+  Account                               Account[]
+  ActivityLog                           ActivityLog[]
+  Client                                Client[]
+  Document                              Document[]
+  Meeting                               Meeting[]
+  Project_Project_createdByToUser       Project[]        @relation("Project_createdByToUser")
+  Project_Project_lastModifiedByToUser  Project[]        @relation("Project_lastModifiedByToUser")
+  ProjectExpense                        ProjectExpense[]
+  Session                               Session[]
+  Task                                  Task[]
+  TeamMember_TeamMember_createdByToUser TeamMember[]     @relation("TeamMember_createdByToUser")
+  TeamMember_TeamMember_userIdToUser    TeamMember?      @relation("TeamMember_userIdToUser")
+  User                                  User?            @relation("UserToUser", fields: [createdBy], references: [id])
+  other_User                            User[]           @relation("UserToUser")
+
+  @@index([email])
+  @@index([role])
+}
+
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AttendeeType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum BillingType {
+  FIXED_PRICE
+  TIME_MATERIALS
+  RETAINER
+  PRO_BONO
+}
+
+enum ClientType {
+  COMPANY
+  INDIVIDUAL
+  NONPROFIT
+  GOVERNMENT
 }
 
 enum Department {
@@ -37,46 +456,10 @@ enum EmploymentType {
   INTERN
 }
 
-enum MemberStatus {
-  ACTIVE
-  ON_LEAVE
-  INACTIVE
-}
-
-enum ClientType {
-  COMPANY
-  INDIVIDUAL
-  NONPROFIT
-  GOVERNMENT
-}
-
-enum ProjectType {
-  AI_AGENT
-  AUTOMATION
-  SAAS
-  CONSULTING
-  OTHER
-}
-
-enum ProjectStatus {
-  PLANNING
-  ACTIVE
-  ON_HOLD
-  COMPLETED
-  ARCHIVED
-}
-
-enum Priority {
-  HIGH
-  MEDIUM
-  LOW
-}
-
-enum BillingType {
-  FIXED_PRICE
-  TIME_MATERIALS
-  RETAINER
-  PRO_BONO
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum HealthStatus {
@@ -97,16 +480,10 @@ enum MeetingType {
   OTHER
 }
 
-enum AttendeeType {
-  INTERNAL
-  EXTERNAL
-}
-
-enum ActionItemStatus {
-  OPEN
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
+enum MemberStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
 }
 
 enum MilestoneStatus {
@@ -116,457 +493,38 @@ enum MilestoneStatus {
   DELAYED
 }
 
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum ProjectType {
+  AI_AGENT
+  AUTOMATION
+  SAAS
+  CONSULTING
+  OTHER
+}
+
+enum Role {
+  ADMIN
+  TEAM_MEMBER
+  CLIENT
+}
+
 enum TaskStatus {
   BACKLOG
   TODO
   IN_PROGRESS
   REVIEW
   DONE
-}
-
-enum ExpenseStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
-// ============================================================================
-// USER & AUTHENTICATION
-// ============================================================================
-
-model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  fullName     String
-  role         Role     @default(TEAM_MEMBER)
-  phone        String?
-  isActive     Boolean  @default(true)
-  lastLogin    DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  createdBy    String?
-
-  // Relations
-  createdByUser       User?               @relation("UserCreator", fields: [createdBy], references: [id])
-  usersCreated        User[]              @relation("UserCreator")
-  teamMemberUser      TeamMember?         @relation("TeamMemberUser")
-  createdProjects     Project[]           @relation("ProjectCreator")
-  modifiedProjects    Project[]           @relation("ProjectModifier")
-  createdClients      Client[]
-  createdTeamMembers  TeamMember[]        @relation("TeamMemberCreator")
-  createdMeetings     Meeting[]
-  activityLogs        ActivityLog[]
-  createdTasks        Task[]
-  uploadedDocuments   Document[]
-  approvedExpenses    ProjectExpense[]    @relation("ExpenseApprover")
-
-  @@index([email])
-  @@index([role])
-}
-
-// ============================================================================
-// TEAM MEMBERS
-// ============================================================================
-
-model TeamMember {
-  id             String          @id @default(cuid())
-  userId         String?         @unique
-  fullName       String
-  email          String          @unique
-  phone          String?
-  roleTitle      String
-  department     Department?
-  specialization Json?          // Array of specializations
-  skills         Json?          // Array of skills
-  hourlyRate     Decimal?       @db.Decimal(10, 2)
-  currency       String         @default("USD")
-  employmentType EmploymentType?
-  startDate      DateTime?
-  status         MemberStatus   @default(ACTIVE)
-  avatarColor    String?        // Hex color code
-  bio            String?        @db.Text
-  linkedinUrl    String?
-  githubUrl      String?
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  createdBy      String?
-
-  // Relations
-  user              User?                @relation("TeamMemberUser", fields: [userId], references: [id])
-  creator           User?                @relation("TeamMemberCreator", fields: [createdBy], references: [id])
-  projectAssignments ProjectAssignment[]
-  meetingAttendees   MeetingAttendee[]
-  actionItems        ActionItem[]
-  tasks              Task[]
-  timeEntries        TimeEntry[]
-  submittedExpenses  ProjectExpense[]    @relation("ExpenseSubmitter")
-
-  @@index([email])
-  @@index([status])
-  @@index([department])
-}
-
-// ============================================================================
-// CLIENTS
-// ============================================================================
-
-model Client {
-  id                     String    @id @default(cuid())
-  clientType             ClientType
-  companyName            String
-  industry               String?
-  companySize            String?
-  website                String?
-  billingAddress         String?   @db.Text
-  timeZone               String?
-  preferredCommunication Json?     // Array of communication methods
-  tags                   Json?     // Array of tags
-  notes                  String?   @db.Text
-  isActive               Boolean   @default(true)
-  clientSince            DateTime?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
-  createdBy              String?
-
-  // Relations
-  creator  User?           @relation(fields: [createdBy], references: [id])
-  contacts ClientContact[]
-  projects Project[]
-
-  @@index([companyName])
-  @@index([isActive])
-}
-
-model ClientContact {
-  id          String   @id @default(cuid())
-  clientId    String
-  isPrimary   Boolean  @default(false)
-  contactName String
-  jobTitle    String?
-  email       String
-  phone       String?
-  mobile      String?
-  linkedinUrl String?
-  notes       String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
-
-  @@index([clientId])
-  @@index([email])
-}
-
-// ============================================================================
-// PROJECTS
-// ============================================================================
-
-model Project {
-  id               String         @id @default(cuid())
-  projectName      String
-  projectCode      String?        @unique
-  clientId         String
-  projectType      ProjectType
-  description      String?        @db.Text
-  internalNotes    String?        @db.Text
-  status           ProjectStatus  @default(PLANNING)
-  priority         Priority       @default(MEDIUM)
-  startDate        DateTime
-  endDate          DateTime
-  actualStartDate  DateTime?
-  actualEndDate    DateTime?
-  estimatedHours   Decimal?       @db.Decimal(10, 2)
-  budgetAmount     Decimal?       @db.Decimal(12, 2)
-  currency         String         @default("USD")
-  billingType      BillingType?
-  progressPercentage Int          @default(0)
-  currentPhase     String?
-  healthStatus     HealthStatus?
-  isArchived       Boolean        @default(false)
-  archivedAt       DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  createdBy        String
-  lastModifiedBy   String?
-
-  // Relations
-  client        Client               @relation(fields: [clientId], references: [id])
-  creator       User                 @relation("ProjectCreator", fields: [createdBy], references: [id])
-  modifier      User?                @relation("ProjectModifier", fields: [lastModifiedBy], references: [id])
-  assignments   ProjectAssignment[]
-  meetings      Meeting[]
-  milestones    Milestone[]
-  tasks         Task[]
-  documents     Document[]
-  timeEntries   TimeEntry[]
-  expenses      ProjectExpense[]
-
-  @@index([clientId])
-  @@index([status])
-  @@index([priority])
-  @@index([startDate])
-  @@index([endDate])
-  @@index([createdBy])
-}
-
-model ProjectAssignment {
-  id                   String    @id @default(cuid())
-  projectId            String
-  memberId             String
-  roleInProject        String
-  allocationPercentage Int       @default(100)
-  startDate            DateTime?
-  endDate              DateTime?
-  isActive             Boolean   @default(true)
-  notes                String?   @db.Text
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
-  // Relations
-  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  member  TeamMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, memberId, roleInProject])
-  @@index([projectId])
-  @@index([memberId])
-}
-
-// ============================================================================
-// MEETINGS
-// ============================================================================
-
-model Meeting {
-  id               String       @id @default(cuid())
-  projectId        String
-  meetingDate      DateTime
-  durationMinutes  Int?
-  meetingType      MeetingType
-  locationPlatform String?
-  agenda           String?      @db.Text
-  notes            String?      @db.Text
-  transcript       String?      @db.Text
-  recordingUrl     String?
-  nextMeetingDate  DateTime?
-  nextMeetingNotes String?      @db.Text
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  createdBy        String?
-
-  // Relations
-  project   Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  creator   User?              @relation(fields: [createdBy], references: [id])
-  attendees MeetingAttendee[]
-  actionItems ActionItem[]
-
-  @@index([projectId])
-  @@index([meetingDate])
-}
-
-model MeetingAttendee {
-  id            String       @id @default(cuid())
-  meetingId     String
-  memberId      String?
-  externalName  String?
-  externalEmail String?
-  attendeeType  AttendeeType
-  attended      Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-
-  // Relations
-  meeting Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  member  TeamMember? @relation(fields: [memberId], references: [id])
-
-  @@index([meetingId])
-}
-
-model ActionItem {
-  id          String           @id @default(cuid())
-  meetingId   String
-  description String           @db.Text
-  assignedTo  String?
-  dueDate     DateTime?
-  status      ActionItemStatus @default(OPEN)
-  completedAt DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  // Relations
-  meeting Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  assignee TeamMember? @relation(fields: [assignedTo], references: [id])
-
-  @@index([meetingId])
-  @@index([status])
-}
-
-// ============================================================================
-// MILESTONES & TASKS (Future Use)
-// ============================================================================
-
-model Milestone {
-  id          String          @id @default(cuid())
-  projectId   String
-  name        String
-  description String?         @db.Text
-  targetDate  DateTime
-  actualDate  DateTime?
-  status      MilestoneStatus @default(PENDING)
-  orderIndex  Int?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  // Relations
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  tasks   Task[]
-
-  @@index([projectId])
-}
-
-model Task {
-  id             String     @id @default(cuid())
-  projectId      String
-  milestoneId    String?
-  assignedTo     String?
-  title          String
-  description    String?    @db.Text
-  status         TaskStatus @default(BACKLOG)
-  priority       Priority   @default(MEDIUM)
-  estimatedHours Decimal?   @db.Decimal(10, 2)
-  actualHours    Decimal?   @db.Decimal(10, 2)
-  dueDate        DateTime?
-  completedAt    DateTime?
-  parentTaskId   String?
-  orderIndex     Int?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  createdBy      String?
-
-  // Relations
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  milestone   Milestone?   @relation(fields: [milestoneId], references: [id])
-  assignee    TeamMember?  @relation(fields: [assignedTo], references: [id])
-  creator     User?        @relation(fields: [createdBy], references: [id])
-  parentTask  Task?        @relation("TaskSubtasks", fields: [parentTaskId], references: [id])
-  subtasks    Task[]       @relation("TaskSubtasks")
-  timeEntries TimeEntry[]
-
-  @@index([projectId])
-  @@index([status])
-  @@index([assignedTo])
-}
-
-// ============================================================================
-// DOCUMENTS (Future Use)
-// ============================================================================
-
-model Document {
-  id          String   @id @default(cuid())
-  projectId   String
-  fileName    String
-  filePath    String
-  fileType    String?
-  fileSize    BigInt?
-  category    String?
-  description String?  @db.Text
-  version     String?
-  uploadedBy  String
-  uploadedAt  DateTime @default(now())
-  isDeleted   Boolean  @default(false)
-
-  // Relations
-  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  uploader User    @relation(fields: [uploadedBy], references: [id])
-
-  @@index([projectId])
-}
-
-// ============================================================================
-// TIME TRACKING & EXPENSES (Future Use)
-// ============================================================================
-
-model TimeEntry {
-  id          String   @id @default(cuid())
-  projectId   String
-  taskId      String?
-  memberId    String
-  workDate    DateTime
-  hours       Decimal  @db.Decimal(10, 2)
-  description String?  @db.Text
-  isBillable  Boolean  @default(true)
-  hourlyRate  Decimal? @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  project Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  task    Task?      @relation(fields: [taskId], references: [id])
-  member  TeamMember @relation(fields: [memberId], references: [id])
-
-  @@index([projectId])
-  @@index([memberId])
-  @@index([workDate])
-}
-
-model ProjectExpense {
-  id           String        @id @default(cuid())
-  projectId    String
-  category     String?
-  description  String        @db.Text
-  amount       Decimal       @db.Decimal(12, 2)
-  currency     String        @default("USD")
-  expenseDate  DateTime
-  receiptUrl   String?
-  isBillable   Boolean       @default(true)
-  submittedBy  String
-  approvedBy   String?
-  status       ExpenseStatus @default(PENDING)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  // Relations
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  submitter TeamMember @relation("ExpenseSubmitter", fields: [submittedBy], references: [id])
-  approver  User?      @relation("ExpenseApprover", fields: [approvedBy], references: [id])
-
-  @@index([projectId])
-  @@index([status])
-}
-
-// ============================================================================
-// ACTIVITY LOG
-// ============================================================================
-
-model ActivityLog {
-  id         String   @id @default(cuid())
-  userId     String
-  entityType String
-  entityId   String
-  action     String
-  changes    Json?
-  ipAddress  String?
-  userAgent  String?  @db.Text
-  createdAt  DateTime @default(now())
-
-  // Relations
-  user User @relation(fields: [userId], references: [id])
-
-  @@index([entityType, entityId])
-  @@index([userId])
-  @@index([createdAt])
-}
-
-// ============================================================================
-// SYSTEM SETTINGS (Future Use)
-// ============================================================================
-
-model SystemSetting {
-  id           String   @id @default(cuid())
-  settingKey   String   @unique
-  settingValue String?  @db.Text
-  settingType  String?
-  description  String?  @db.Text
-  isPublic     Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }

@@ -78,6 +78,7 @@ This is an **AI Agency Project Management System** built for managing projects, 
 6. **Debug issues** and suggest solutions
 7. **Review code** for quality and consistency
 8. **Guide the developer** through each phase
+9. never run npm run dev
 
 ---
 

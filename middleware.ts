@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 
+// Force Node.js runtime for middleware (required for Prisma)
+export const runtime = "nodejs";
+
 // Define public routes that don't require authentication
 const publicRoutes = ["/login", "/register", "/api/auth"];
 
@@ -10,9 +13,6 @@ const protectedRoutes = ["/dashboard", "/projects", "/clients", "/team", "/meeti
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // Check if the route is public
-  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));

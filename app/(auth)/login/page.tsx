@@ -41,7 +41,6 @@ function LoginForm() {
       }
     } catch (err) {
       setError("An error occurred during login. Please try again.");
-      console.error("Login error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +119,7 @@ function LoginForm() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
             <p className="text-center text-sm text-[#525252]">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <Link
                 href="/register"
                 className="text-[#171717] hover:underline font-medium"
