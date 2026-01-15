@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 const publicRoutes = ["/login", "/register", "/api/auth"];
 
 // Define protected routes that require authentication
-const protectedRoutes = ["/dashboard", "/projects", "/clients", "/team", "/meetings"];
+const protectedRoutes = ["/projects", "/clients", "/team", "/meetings", "/settings", "/profile"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -29,14 +29,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If accessing auth pages with an active session, redirect to dashboard
+  // If accessing auth pages with an active session, redirect to home
   if ((pathname === "/login" || pathname === "/register") && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  // If accessing root with a session, redirect to dashboard
-  if (pathname === "/" && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // If accessing root without a session, redirect to login

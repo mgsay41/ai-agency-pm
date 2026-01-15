@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Dashboard - AI Agency PM",
@@ -23,10 +24,9 @@ export default function DashboardLayout({
         <Header />
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="container mx-auto p-6 max-w-7xl">{children}</div>
-        </main>
+        <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+      <Toaster />
     </div>
   );
 }

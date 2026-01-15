@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FolderKanban,
@@ -10,7 +11,9 @@ import {
   Calendar,
   Settings,
   User,
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,27 +23,27 @@ import { useAuth } from "@/lib/auth-client";
 const navigation = [
   {
     name: "Dashboard",
-    href: "/dashboard",
+    href: "/",
     icon: LayoutDashboard,
   },
   {
     name: "Projects",
-    href: "/dashboard/projects",
+    href: "/projects",
     icon: FolderKanban,
   },
   {
     name: "Clients",
-    href: "/dashboard/clients",
+    href: "/clients",
     icon: Users,
   },
   {
     name: "Team",
-    href: "/dashboard/team",
+    href: "/team",
     icon: UsersRound,
   },
   {
     name: "Meetings",
-    href: "/dashboard/meetings",
+    href: "/meetings",
     icon: Calendar,
   },
 ];
@@ -48,12 +51,12 @@ const navigation = [
 const secondaryNavigation = [
   {
     name: "Settings",
-    href: "/dashboard/settings",
+    href: "/settings",
     icon: Settings,
   },
   {
     name: "Profile",
-    href: "/dashboard/profile",
+    href: "/profile",
     icon: User,
   },
 ];
@@ -61,6 +64,7 @@ const secondaryNavigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Get user initials
   const getInitials = (name?: string) => {
@@ -73,16 +77,24 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-60 flex-col bg-[#FAFAFA] border-r border-[#E5E5E5]">
+    <div className={cn(
+      "flex h-screen flex-col bg-[#FAFAFA] border-r border-[#E5E5E5] transition-all duration-300 relative",
+      isCollapsed ? "w-16" : "w-60"
+    )}>
       {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-[#E5E5E5]">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded bg-[#18181B]">
+      <div className={cn(
+        "flex h-16 items-center border-b border-[#E5E5E5]",
+        isCollapsed ? "justify-center px-2" : "px-6"
+      )}>
+        <Link href="/" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded bg-[#18181B] shrink-0">
             <span className="text-sm font-semibold text-white">AI</span>
           </div>
-          <span className="text-base font-semibold text-[#171717]">
-            Agency PM
-          </span>
+          {!isCollapsed && (
+            <span className="text-base font-semibold text-[#171717] whitespace-nowrap">
+              Agency PM
+            </span>
+          )}
         </Link>
       </div>
 
@@ -94,15 +106,17 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              title={isCollapsed ? item.name : undefined}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-[15px] transition-colors",
+                "flex items-center gap-3 rounded-md text-[15px] transition-colors",
+                isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
                 isActive
                   ? "bg-[#18181B] text-white"
                   : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
               )}
             >
-              <item.icon className="h-5 w-5" strokeWidth={1.5} />
-              <span>{item.name}</span>
+              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              {!isCollapsed && <span>{item.name}</span>}
             </Link>
           );
         })}
@@ -115,15 +129,17 @@ export function Sidebar() {
             <Link
               key={item.name}
               href={item.href}
+              title={isCollapsed ? item.name : undefined}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-md text-[15px] transition-colors",
+                "flex items-center gap-3 rounded-md text-[15px] transition-colors",
+                isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
                 isActive
                   ? "bg-[#18181B] text-white"
                   : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
               )}
             >
-              <item.icon className="h-5 w-5" strokeWidth={1.5} />
-              <span>{item.name}</span>
+              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              {!isCollapsed && <span>{item.name}</span>}
             </Link>
           );
         })}
@@ -131,22 +147,43 @@ export function Sidebar() {
 
       {/* User Menu at Bottom */}
       <div className="border-t border-[#E5E5E5] p-4">
-        <div className="flex items-center gap-3 px-3 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E5E5]">
+        <div className={cn(
+          "flex items-center gap-3",
+          isCollapsed ? "justify-center px-0" : "px-3 py-2"
+        )}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5E5E5] shrink-0">
             <span className="text-sm font-medium text-[#525252]">
               {getInitials(user?.name)}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-[#171717] truncate">
-              {user?.name || "User"}
-            </p>
-            <p className="text-xs text-[#A3A3A3] truncate">
-              {user?.role || "Member"}
-            </p>
-          </div>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[#171717] truncate">
+                {user?.name || "User"}
+              </p>
+              <p className="text-xs text-[#A3A3A3] truncate">
+                {user?.role || "Member"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className={cn(
+          "absolute -right-3 top-20 h-6 w-6 rounded-full border border-[#E5E5E5] bg-white flex items-center justify-center hover:bg-[#FAFAFA] transition-colors shadow-sm",
+          "z-10"
+        )}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {isCollapsed ? (
+          <ChevronRight className="h-4 w-4 text-[#525252]" />
+        ) : (
+          <ChevronLeft className="h-4 w-4 text-[#525252]" />
+        )}
+      </button>
     </div>
   );
 }
