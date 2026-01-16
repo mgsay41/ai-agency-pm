@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import {
   clientSchema,
   createClientWithContactSchema,
@@ -9,128 +8,141 @@ import { nanoid } from "nanoid";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { sanitizeFormData } from "@/lib/sanitize";
+import { Prisma, Role } from "@prisma/client";
+import { withRole, apiResponses } from "@/lib/api-middleware";
+import { PERMISSIONS, hasPermission } from "@/lib/permissions";
 
-export async function GET(request: NextRequest) {
-  try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
+// GET /api/clients - List clients with role-based filtering
+// Admin: All clients (including deleted with ?includeDeleted=true)
+// Sales: Only their own clients (not deleted)
+// Team Member: Forbidden
+export const GET = withRole(
+  ["ADMIN", "SALES"],
+  async (request, { user }) => {
+    try {
+      const userRole = user.role as Role;
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+      // Get query parameters
+      const { searchParams } = new URL(request.url);
+      const search = searchParams.get("search") || "";
+      const industry = searchParams.get("industry") || "";
+      const isActive = searchParams.get("isActive");
+      const clientType = searchParams.get("clientType") || "";
+      const page = parseInt(searchParams.get("page") || "1");
+      const limit = parseInt(searchParams.get("limit") || "25");
+      const sortBy = searchParams.get("sortBy") || "companyName";
+      const sortOrder = searchParams.get("sortOrder") || "asc";
+      const includeDeleted = searchParams.get("includeDeleted") === "true";
 
-    // Get query parameters
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const industry = searchParams.get("industry") || "";
-    const isActive = searchParams.get("isActive");
-    const clientType = searchParams.get("clientType") || "";
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "25");
-    const sortBy = searchParams.get("sortBy") || "companyName";
-    const sortOrder = searchParams.get("sortOrder") || "asc";
+      // Build where clause with role-based filtering
+      const where: Prisma.ClientWhereInput = {};
 
-    // Build where clause
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { companyName: { contains: search, mode: "insensitive" } },
-        { industry: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
-    if (industry) {
-      where.industry = industry;
-    }
-
-    if (isActive !== null && isActive !== undefined) {
-      where.isActive = isActive === "true";
-    }
-
-    if (clientType) {
-      const types = clientType.split(",");
-      if (types.length > 0) {
-        where.clientType = { in: types };
+      // Role-based filtering
+      if (hasPermission(userRole, PERMISSIONS.CLIENT_VIEW_ALL)) {
+        // Admin can see all clients
+        // Only include deleted if explicitly requested
+        if (!includeDeleted) {
+          where.deletedAt = null;
+        }
+      } else if (hasPermission(userRole, PERMISSIONS.CLIENT_VIEW_OWN)) {
+        // Sales can only see their own clients (not deleted)
+        where.createdBy = user.id;
+        where.deletedAt = null;
       }
-    }
 
-    // Get total count for pagination
-    const total = await db.client.count({ where });
+      // Apply search filters
+      if (search) {
+        where.OR = [
+          { companyName: { contains: search, mode: "insensitive" } },
+          { industry: { contains: search, mode: "insensitive" } },
+        ];
+      }
 
-    // Get clients with pagination
-    const clients = await db.client.findMany({
-      where,
-      orderBy: {
-        [sortBy]: sortOrder,
-      },
-      skip: (page - 1) * limit,
-      take: limit,
-      include: {
-        ClientContact: {
-          where: { isPrimary: true },
-          take: 1,
+      if (industry) {
+        where.industry = industry;
+      }
+
+      if (isActive !== null && isActive !== undefined) {
+        where.isActive = isActive === "true";
+      }
+
+      if (clientType) {
+        const types = clientType.split(",");
+        if (types.length > 0) {
+          where.clientType = { in: types };
+        }
+      }
+
+      // Get total count for pagination
+      const total = await db.client.count({ where });
+
+      // Get clients with pagination
+      const clients = await db.client.findMany({
+        where,
+        orderBy: {
+          [sortBy]: sortOrder,
         },
-        Project: {
-          select: {
-            id: true,
-            status: true,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          ClientContact: {
+            where: { isPrimary: true },
+            take: 1,
+          },
+          Project: {
+            select: {
+              id: true,
+              status: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    // Transform data to include project counts and clean up relation names
-    const transformedClients = clients.map((client) => {
-      const { ClientContact, Project, ...rest } = client as any;
-      return {
-        ...rest,
-        activeProjectsCount: Project.filter((p: any) => p.status === "ACTIVE").length,
-        totalProjectsCount: Project.length,
-        primaryContact: ClientContact[0] || null,
-        _count: {
-          projects: Project.length,
+      // Transform data to include project counts and clean up relation names
+      const transformedClients = clients.map((client) => {
+        const { ClientContact, Project, ...rest } = client;
+        return {
+          ...rest,
+          activeProjectsCount: Project.filter((p) => p.status === "ACTIVE")
+            .length,
+          totalProjectsCount: Project.length,
+          primaryContact: ClientContact[0] || null,
+          _count: {
+            projects: Project.length,
+          },
+        };
+      });
+
+      return apiResponses.success({
+        clients: transformedClients,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
         },
-      };
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: transformedClients,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    logger.error("GET /api/clients error", error, { action: "fetch_clients" });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      });
+    } catch (error) {
+      logger.error("GET /api/clients error", error, {
+        action: "fetch_clients",
+      });
+      return apiResponses.serverError();
     }
+  }
+);
 
+// POST /api/clients - Create new client
+// Admin: Can create for any user
+// Sales: Can create (auto-assigned as createdBy)
+export const POST = withRole(["ADMIN", "SALES"], async (request, { user }) => {
+  try {
     const body = await request.json();
 
     // Check if body includes contact information
     const hasContact = body.contact && Object.keys(body.contact).length > 0;
 
-    let validatedData: any;
-    let contactData: any = null;
+    let validatedData: z.infer<typeof clientSchema>;
+    let contactData: z.infer<typeof createClientWithContactSchema>['contact'] | null = null;
 
     if (hasContact) {
       // Validate with contact schema
@@ -149,7 +161,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Sanitize contact data if present
-    let sanitizedContactData: any = null;
+    let sanitizedContactData: Record<string, unknown> | null = null;
     if (contactData) {
       sanitizedContactData = sanitizeFormData(contactData, {
         textarea: ["notes"],
@@ -157,83 +169,76 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create client
-    const client = await db.client.create({
-      data: {
-        id: nanoid(),
-        companyName: sanitizedClientData.companyName,
-        clientType: sanitizedClientData.clientType,
-        industry: sanitizedClientData.industry,
-        companySize: sanitizedClientData.companySize,
-        website: sanitizedClientData.website || null,
-        billingAddress: sanitizedClientData.billingAddress,
-        timeZone: sanitizedClientData.timeZone,
-        preferredCommunication: sanitizedClientData.preferredCommunication || [],
-        tags: sanitizedClientData.tags || [],
-        notes: sanitizedClientData.notes,
-        isActive: sanitizedClientData.isActive ?? true,
-        clientSince: sanitizedClientData.clientSince,
-        createdBy: session.user.id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    });
-
-    // Create primary contact if provided
-    let contact = null;
-    if (sanitizedContactData) {
-      contact = await db.clientContact.create({
+    // Use transaction to ensure atomicity
+    const result = await db.$transaction(async (tx) => {
+      // Create client
+      const client = await tx.client.create({
         data: {
           id: nanoid(),
-          clientId: client.id,
-          isPrimary: true,
-          contactName: sanitizedContactData.contactName,
-          jobTitle: sanitizedContactData.jobTitle,
-          email: sanitizedContactData.email,
-          phone: sanitizedContactData.phone,
-          mobile: sanitizedContactData.mobile,
-          linkedinUrl: sanitizedContactData.linkedinUrl || null,
-          notes: sanitizedContactData.notes,
+          companyName: sanitizedClientData.companyName,
+          clientType: sanitizedClientData.clientType,
+          industry: sanitizedClientData.industry,
+          companySize: sanitizedClientData.companySize,
+          website: sanitizedClientData.website || null,
+          billingAddress: sanitizedClientData.billingAddress,
+          timeZone: sanitizedClientData.timeZone,
+          preferredCommunication: sanitizedClientData.preferredCommunication || [],
+          tags: sanitizedClientData.tags || [],
+          notes: sanitizedClientData.notes,
+          isActive: sanitizedClientData.isActive ?? true,
+          clientSince: sanitizedClientData.clientSince,
+          createdBy: user.id, // Auto-assign current user as creator
           createdAt: new Date(),
           updatedAt: new Date(),
         },
       });
-    }
 
-    // Log activity
-    await db.activityLog.create({
-      data: {
-        id: nanoid(),
-        userId: session.user.id,
-        entityType: "client",
-        entityId: client.id,
-        action: "created",
-        createdAt: new Date(),
-      },
+      // Create primary contact if provided
+      let contact = null;
+      if (sanitizedContactData) {
+        contact = await tx.clientContact.create({
+          data: {
+            id: nanoid(),
+            clientId: client.id,
+            isPrimary: true,
+            contactName: sanitizedContactData.contactName as string,
+            jobTitle: sanitizedContactData.jobTitle as string,
+            email: sanitizedContactData.email as string,
+            phone: sanitizedContactData.phone as string | null,
+            mobile: sanitizedContactData.mobile as string | null,
+            linkedinUrl: sanitizedContactData.linkedinUrl as string | null,
+            notes: sanitizedContactData.notes as string | null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+      }
+
+      // Log activity
+      await tx.activityLog.create({
+        data: {
+          id: nanoid(),
+          userId: user.id,
+          entityType: "client",
+          entityId: client.id,
+          action: "created",
+          createdAt: new Date(),
+        },
+      });
+
+      return { client, contact };
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          ...client,
-          primaryContact: contact,
-        },
-      },
-      { status: 201 }
-    );
+    return apiResponses.created({
+      ...result.client,
+      primaryContact: result.contact,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation error", details: error.issues },
-        { status: 400 }
-      );
+      return apiResponses.badRequest("Validation error", error.issues);
     }
 
     logger.error("POST /api/clients error", error, { action: "create_client" });
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return apiResponses.serverError();
   }
-}
+});

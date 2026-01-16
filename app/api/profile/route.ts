@@ -1,23 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth";
 import { updateProfileSchema } from "@/lib/validations/profile";
 import { sanitizePlainText } from "@/lib/sanitize";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
+import { withAuth, apiResponses } from "@/lib/api-middleware";
 
 // GET /api/profile - Get current user's profile
-export async function GET(request: NextRequest) {
+// All authenticated users can access their own profile
+export const GET = withAuth(async (request, { user }) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const user = await db.user.findUnique({
-      where: { id: session.user.id },
+    const userProfile = await db.user.findUnique({
+      where: { id: user.id },
       select: {
         id: true,
         name: true,
@@ -32,34 +25,21 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    if (!userProfile) {
+      return apiResponses.notFound("User not found");
     }
 
-    return NextResponse.json({
-      success: true,
-      data: user,
-    });
+    return apiResponses.success(userProfile);
   } catch (error) {
-    console.error("GET /api/profile error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logger.error("GET /api/profile error:", error);
+    return apiResponses.serverError();
   }
-}
+});
 
 // PATCH /api/profile - Update current user's profile
-export async function PATCH(request: NextRequest) {
+// All authenticated users can update their own profile
+export const PATCH = withAuth(async (request, { user }) => {
   try {
-    const session = await auth.api.getSession({
-      headers: request.headers,
-    });
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const body = await request.json();
     const validatedData = updateProfileSchema.parse(body);
 
@@ -80,21 +60,18 @@ export async function PATCH(request: NextRequest) {
       const existingUser = await db.user.findFirst({
         where: {
           email: sanitizedData.email,
-          id: { not: session.user.id },
+          id: { not: user.id },
         },
       });
 
       if (existingUser) {
-        return NextResponse.json(
-          { error: "Email is already taken" },
-          { status: 409 }
-        );
+        return apiResponses.conflict("Email is already taken");
       }
     }
 
     // Update user profile
     const updatedUser = await db.user.update({
-      where: { id: session.user.id },
+      where: { id: user.id },
       data: sanitizedData,
       select: {
         id: true,
@@ -114,34 +91,21 @@ export async function PATCH(request: NextRequest) {
     await db.activityLog.create({
       data: {
         id: crypto.randomUUID(),
-        userId: session.user.id,
+        userId: user.id,
         entityType: "user",
-        entityId: session.user.id,
+        entityId: user.id,
         action: "updated",
         changes: sanitizedData,
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      data: updatedUser,
-      message: "Profile updated successfully",
-    });
+    return apiResponses.success(updatedUser, "Profile updated successfully");
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: "Validation error",
-          details: error.errors,
-        },
-        { status: 400 }
-      );
+      return apiResponses.badRequest("Validation error", error.issues);
     }
 
-    console.error("PATCH /api/profile error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    logger.error("PATCH /api/profile error:", error);
+    return apiResponses.serverError();
   }
-}
+});
