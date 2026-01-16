@@ -1,22 +1,15 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ProjectDetailClient } from "./project-detail-client";
+import { getProjectById } from "@/lib/services/project.service";
+import { logger } from "@/lib/logger";
 
 async function getProject(id: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const response = await fetch(`${baseUrl}/api/projects/${id}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.data;
+    const project = await getProjectById(id);
+    return project;
   } catch (error) {
-    console.error("Failed to fetch project:", error);
+    logger.error("Failed to fetch project", error, { action: "fetch_project" });
     return null;
   }
 }

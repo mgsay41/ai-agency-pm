@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 import type { Project } from "@/hooks/use-projects";
 
 interface ProjectsGridProps {
@@ -66,10 +67,13 @@ export function ProjectsGrid({
         );
       },
       cell: ({ row }) => (
-        <div>
-          <div className="font-medium text-[#171717]">
+        <div className="min-w-[200px]">
+          <Link
+            href={`/projects/${row.original.id}`}
+            className="font-medium text-[#171717] hover:text-[#18181B] hover:underline transition-colors"
+          >
             {row.original.project_name}
-          </div>
+          </Link>
           <div className="text-xs text-[#A3A3A3]">
             {row.original.project_code}
           </div>
@@ -94,7 +98,7 @@ export function ProjectsGrid({
         const status = row.original.status;
         return (
           <Badge
-            className={`${statusColors[status] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal`}
+            className={`${statusColors[status] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
           >
             {status.replace("_", " ")}
           </Badge>
@@ -179,7 +183,7 @@ export function ProjectsGrid({
         const priority = row.original.priority;
         return (
           <Badge
-            className={`${priorityColors[priority] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal`}
+            className={`${priorityColors[priority] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
           >
             {priority}
           </Badge>
@@ -255,18 +259,20 @@ export function ProjectsGrid({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 hover:bg-[#FAFAFA]"
+            className="h-8 w-8 p-0 hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2"
             onClick={() => onEdit(row.original)}
+            aria-label={`Edit project ${row.original.project_name}`}
           >
-            <Pencil className="h-4 w-4 text-[#525252]" />
+            <Pencil className="h-4 w-4 text-[#525252]" aria-hidden="true" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 hover:bg-[#FEF2F2]"
+            className="h-8 w-8 p-0 hover:bg-[#FEF2F2] focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:ring-offset-2"
             onClick={() => onDelete(row.original)}
+            aria-label={`Delete project ${row.original.project_name}`}
           >
-            <Trash2 className="h-4 w-4 text-[#DC2626]" />
+            <Trash2 className="h-4 w-4 text-[#DC2626]" aria-hidden="true" />
           </Button>
         </div>
       ),
@@ -296,39 +302,43 @@ export function ProjectsGrid({
   }
 
   return (
-    <div className="border border-[#E5E5E5] rounded-lg overflow-hidden">
-      <Table>
-        <TableHeader className="bg-[#FAFAFA]">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="hover:bg-[#FAFAFA]">
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="text-[#525252]">
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row) => (
-            <TableRow
-              key={row.id}
-              className="hover:bg-[#FAFAFA] border-b border-[#E5E5E5]"
-            >
-              {row.getVisibleCells().map((cell) => (
-                <TableCell key={cell.id}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+    <div className="border border-[#E5E5E5] rounded-lg overflow-hidden bg-white">
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-gradient-to-b from-[#FAFAFA] to-[#F5F5F5] border-b border-[#E5E5E5]">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="text-[#525252] whitespace-nowrap font-semibold h-12">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row, index) => (
+              <TableRow
+                key={row.id}
+                className={`hover:bg-[#F9FAFB] transition-colors duration-150 border-b border-[#E5E5E5] last:border-0 ${
+                  index % 2 === 0 ? "bg-white" : "bg-[#FAFAFA]/30"
+                }`}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id} className="whitespace-nowrap py-4">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

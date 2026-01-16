@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 // Force Node.js runtime for middleware (required for Prisma)
 export const runtime = "nodejs";
@@ -14,13 +15,35 @@ const protectedRoutes = ["/projects", "/clients", "/team", "/meetings", "/settin
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Check if the route is public
+  const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+
   // Check if the route is protected
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  // Get session
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  });
+  // Get session with error handling
+  let session = null;
+  try {
+    session = await auth.api.getSession({
+      headers: request.headers,
+    });
+  } catch (error) {
+    // Log the error but don't block the request
+    logger.error("Middleware failed to get session", error, { action: "middleware_auth" });
+
+    // If it's a public route, allow access even if database is down
+    if (isPublicRoute || pathname === "/" || pathname === "/login" || pathname === "/register") {
+      return NextResponse.next();
+    }
+
+    // For protected routes, redirect to login with an error message
+    if (isProtectedRoute) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      loginUrl.searchParams.set("error", "service_unavailable");
+      return NextResponse.redirect(loginUrl);
+    }
+  }
 
   // If accessing a protected route without a session, redirect to login
   if (isProtectedRoute && !session) {

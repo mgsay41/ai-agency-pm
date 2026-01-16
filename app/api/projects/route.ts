@@ -16,6 +16,7 @@ import {
   getPaginatedProjects,
   generateProjectCode,
 } from "@/lib/services/project.service";
+import { sanitizeFormData } from "@/lib/sanitize";
 
 /**
  * GET /api/projects
@@ -69,9 +70,15 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData: CreateProjectInput = createProjectSchema.parse(body);
 
+    // Sanitize input to prevent XSS
+    const sanitizedData = sanitizeFormData(validatedData, {
+      textarea: ["description", "internalNotes"],
+      plainText: ["projectName", "projectCode", "currentPhase"],
+    });
+
     // Get client info for project code generation
     const client = await db.client.findUnique({
-      where: { id: validatedData.clientId },
+      where: { id: sanitizedData.clientId },
       select: { companyName: true },
     });
 
@@ -80,10 +87,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate project code if not provided
-    let projectCode = validatedData.projectCode;
+    let projectCode = sanitizedData.projectCode;
     if (!projectCode) {
       projectCode = await generateProjectCode(
-        validatedData.projectName,
+        sanitizedData.projectName,
         client.companyName
       );
     }
@@ -92,25 +99,25 @@ export async function POST(request: NextRequest) {
     const project = await db.project.create({
       data: {
         id: crypto.randomUUID(),
-        projectName: validatedData.projectName,
+        projectName: sanitizedData.projectName,
         projectCode,
-        clientId: validatedData.clientId,
-        projectType: validatedData.projectType,
-        description: validatedData.description || null,
-        internalNotes: validatedData.internalNotes || null,
-        status: validatedData.status,
-        priority: validatedData.priority,
-        startDate: validatedData.startDate,
-        endDate: validatedData.endDate,
-        actualStartDate: validatedData.actualStartDate || null,
-        actualEndDate: validatedData.actualEndDate || null,
-        estimatedHours: validatedData.estimatedHours || null,
-        budgetAmount: validatedData.budgetAmount || null,
-        currency: validatedData.currency,
-        billingType: validatedData.billingType || null,
-        progressPercentage: validatedData.progressPercentage,
-        currentPhase: validatedData.currentPhase || null,
-        healthStatus: validatedData.healthStatus || null,
+        clientId: sanitizedData.clientId,
+        projectType: sanitizedData.projectType,
+        description: sanitizedData.description || null,
+        internalNotes: sanitizedData.internalNotes || null,
+        status: sanitizedData.status,
+        priority: sanitizedData.priority,
+        startDate: sanitizedData.startDate,
+        endDate: sanitizedData.endDate,
+        actualStartDate: sanitizedData.actualStartDate || null,
+        actualEndDate: sanitizedData.actualEndDate || null,
+        estimatedHours: sanitizedData.estimatedHours || null,
+        budgetAmount: sanitizedData.budgetAmount || null,
+        currency: sanitizedData.currency,
+        billingType: sanitizedData.billingType || null,
+        progressPercentage: sanitizedData.progressPercentage,
+        currentPhase: sanitizedData.currentPhase || null,
+        healthStatus: sanitizedData.healthStatus || null,
         createdBy: session.user.id,
         lastModifiedBy: session.user.id,
         updatedAt: new Date(),

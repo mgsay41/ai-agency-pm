@@ -9,7 +9,6 @@ import {
   Users,
   UsersRound,
   Calendar,
-  Settings,
   User,
   LogOut,
   ChevronLeft,
@@ -49,11 +48,6 @@ const navigation = [
 ];
 
 const secondaryNavigation = [
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-  },
   {
     name: "Profile",
     href: "/profile",
@@ -99,7 +93,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
         {navigation.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
           return (
@@ -107,21 +101,23 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               title={isCollapsed ? item.name : undefined}
+              aria-label={item.name}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md text-[15px] transition-colors",
+                "flex items-center gap-3 rounded-md text-[15px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2",
                 isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
                 isActive
                   ? "bg-[#18181B] text-white"
                   : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
               )}
             >
-              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               {!isCollapsed && <span>{item.name}</span>}
             </Link>
           );
         })}
 
-        <Separator className="my-4" />
+        <Separator className="my-4" role="separator" />
 
         {secondaryNavigation.map((item) => {
           const isActive = pathname === item.href;
@@ -130,15 +126,17 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               title={isCollapsed ? item.name : undefined}
+              aria-label={item.name}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md text-[15px] transition-colors",
+                "flex items-center gap-3 rounded-md text-[15px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2",
                 isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
                 isActive
                   ? "bg-[#18181B] text-white"
                   : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
               )}
             >
-              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} />
+              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               {!isCollapsed && <span>{item.name}</span>}
             </Link>
           );
@@ -174,14 +172,15 @@ export function Sidebar() {
         onClick={() => setIsCollapsed(!isCollapsed)}
         className={cn(
           "absolute -right-3 top-20 h-6 w-6 rounded-full border border-[#E5E5E5] bg-white flex items-center justify-center hover:bg-[#FAFAFA] transition-colors shadow-sm",
-          "z-10"
+          "z-10 focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2"
         )}
         aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!isCollapsed}
       >
         {isCollapsed ? (
-          <ChevronRight className="h-4 w-4 text-[#525252]" />
+          <ChevronRight className="h-4 w-4 text-[#525252]" aria-hidden="true" />
         ) : (
-          <ChevronLeft className="h-4 w-4 text-[#525252]" />
+          <ChevronLeft className="h-4 w-4 text-[#525252]" aria-hidden="true" />
         )}
       </button>
     </div>

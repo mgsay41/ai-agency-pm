@@ -36,50 +36,58 @@ export const healthStatusEnum = z.enum(["ON_TRACK", "AT_RISK", "OFF_TRACK"]);
 export const createProjectSchema = z
   .object({
     projectName: z
-      .string()
-      .min(1, "Project name is required")
-      .max(255, "Project name must be less than 255 characters"),
+      .string({ message: "Project name is required" })
+      .min(1, "Project name cannot be empty")
+      .max(255, "Project name must be less than 255 characters")
+      .trim(),
     projectCode: z
       .string()
       .max(50, "Project code must be less than 50 characters")
       .optional(),
-    clientId: z.string().min(1, "Client is required"),
+    clientId: z
+      .string({ message: "Please select a client" })
+      .min(1, "Please select a client"),
     projectType: projectTypeEnum,
     description: z.string().optional(),
     internalNotes: z.string().optional(),
-    status: projectStatusEnum.default("PLANNING"),
-    priority: priorityEnum.default("MEDIUM"),
-    startDate: z.coerce.date({
-      message: "Start date is required and must be a valid date",
+    status: projectStatusEnum,
+    priority: priorityEnum,
+    startDate: z.date({
+      message: "Please enter a valid start date",
     }),
-    endDate: z.coerce.date({
-      message: "End date is required and must be a valid date",
+    endDate: z.date({
+      message: "Please enter a valid end date",
     }),
-    actualStartDate: z.coerce.date().optional().nullable(),
-    actualEndDate: z.coerce.date().optional().nullable(),
+    actualStartDate: z.date().optional().nullable(),
+    actualEndDate: z.date().optional().nullable(),
     estimatedHours: z
-      .number()
-      .positive("Estimated hours must be positive")
+      .number({
+        message: "Estimated hours must be a number",
+      })
+      .positive("Estimated hours must be greater than 0")
+      .max(10000, "Estimated hours seems too high (max 10,000)")
       .optional()
       .nullable(),
     budgetAmount: z
-      .number()
-      .positive("Budget amount must be positive")
+      .number({
+        message: "Budget must be a number",
+      })
+      .positive("Budget must be greater than 0")
+      .max(100000000, "Budget seems too high")
       .optional()
       .nullable(),
-    currency: z.string().max(3).default("USD"),
+    currency: z.string().max(3),
     billingType: billingTypeEnum.optional().nullable(),
     progressPercentage: z
       .number()
-      .int()
-      .min(0, "Progress must be at least 0")
-      .max(100, "Progress must be at most 100")
-      .default(0),
+      .int("Progress must be a whole number")
+      .min(0, "Progress cannot be negative")
+      .max(100, "Progress cannot exceed 100%"),
     currentPhase: z.string().max(255).optional().nullable(),
     healthStatus: healthStatusEnum.optional().nullable(),
   })
   .refine((data) => data.endDate > data.startDate, {
-    message: "End date must be after start date",
+    message: "End date must be later than start date",
     path: ["endDate"],
   });
 
@@ -102,10 +110,10 @@ export const updateProjectSchema = z
     internalNotes: z.string().optional().nullable(),
     status: projectStatusEnum.optional(),
     priority: priorityEnum.optional(),
-    startDate: z.coerce.date().optional(),
-    endDate: z.coerce.date().optional(),
-    actualStartDate: z.coerce.date().optional().nullable(),
-    actualEndDate: z.coerce.date().optional().nullable(),
+    startDate: z.date().optional(),
+    endDate: z.date().optional(),
+    actualStartDate: z.date().optional().nullable(),
+    actualEndDate: z.date().optional().nullable(),
     estimatedHours: z
       .number()
       .positive("Estimated hours must be positive")
@@ -198,8 +206,8 @@ export const projectAssignmentSchema = z.object({
     .min(0, "Allocation must be at least 0")
     .max(100, "Allocation must be at most 100")
     .default(100),
-  startDate: z.coerce.date().optional().nullable(),
-  endDate: z.coerce.date().optional().nullable(),
+  startDate: z.date().optional().nullable(),
+  endDate: z.date().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 

@@ -48,7 +48,10 @@
       "Bash(node:*)",
       "Bash(npx tsx:*)",
       "Bash(del:*)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(find:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(if exist .next rmdir /s /q .next)"
     ]
   }
 }

@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectDialog } from "@/components/projects/project-dialog";
-import { ArrowLeft, Pencil, Calendar, DollarSign, Users, FileText } from "lucide-react";
+import { MeetingsGrid } from "@/components/meetings/meetings-grid";
+import { MeetingDialog } from "@/components/meetings/meeting-dialog";
+import { ArrowLeft, Pencil, Calendar, DollarSign, Users, FileText, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useMeetings } from "@/hooks/use-meetings";
 import type { Project } from "@/hooks/use-projects";
 import type { CreateProjectInput } from "@/lib/validations/project";
 
@@ -35,6 +38,14 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
   const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
+
+  const { meetings, isLoading: meetingsLoading, fetchMeetings, deleteMeeting } =
+    useMeetings({ projectId: project.id });
+
+  useEffect(() => {
+    fetchMeetings();
+  }, [project.id]);
 
   const handleUpdateProject = async (data: CreateProjectInput) => {
     setIsLoading(true);
@@ -81,12 +92,12 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                 {project.project_name}
               </h1>
               <Badge
-                className={`${statusColors[project.status] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal`}
+                className={`${statusColors[project.status] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
               >
                 {project.status.replace("_", " ")}
               </Badge>
               <Badge
-                className={`${priorityColors[project.priority] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal`}
+                className={`${priorityColors[project.priority] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
               >
                 {project.priority}
               </Badge>
@@ -110,6 +121,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="client">Client</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
+          <TabsTrigger value="meetings">Meetings</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
         </TabsList>
 
@@ -298,6 +310,35 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
           </Card>
         </TabsContent>
 
+        {/* Meetings Tab */}
+        <TabsContent value="meetings" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[#171717]">Project Meetings</h3>
+              <p className="text-sm text-[#525252] mt-1">
+                View and manage all meetings for this project
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsMeetingDialogOpen(true)}
+              className="bg-[#18181B] hover:bg-[#27272A]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Meeting
+            </Button>
+          </div>
+
+          <MeetingsGrid
+            meetings={meetings}
+            onEdit={(id) => {
+              setIsMeetingDialogOpen(true);
+            }}
+            onDelete={deleteMeeting}
+            onView={(id) => router.push(`/meetings/${id}`)}
+            isLoading={meetingsLoading}
+          />
+        </TabsContent>
+
         {/* Notes Tab */}
         <TabsContent value="notes">
           <Card className="border-[#E5E5E5]">
@@ -318,6 +359,14 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Meeting Dialog */}
+      <MeetingDialog
+        projectId={project.id}
+        open={isMeetingDialogOpen}
+        onOpenChange={setIsMeetingDialogOpen}
+        onSuccess={fetchMeetings}
+      />
 
       {/* Edit Dialog */}
       <ProjectDialog

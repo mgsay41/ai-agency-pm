@@ -7,6 +7,7 @@ import { ProjectsGrid } from "@/components/projects/projects-grid";
 import { ProjectFilters } from "@/components/projects/project-filters";
 import { ProjectDialog } from "@/components/projects/project-dialog";
 import { DeleteConfirmDialog } from "@/components/ui/delete-confirm-dialog";
+import { TableSkeleton } from "@/components/ui/skeleton";
 import { useProjects, type Project, type ProjectFilters as ProjectFiltersType } from "@/hooks/use-projects";
 import type { CreateProjectInput } from "@/lib/validations/project";
 import { toast } from "sonner";
@@ -77,7 +78,7 @@ export default function ProjectsPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Page Header */}
-      <div className="flex items-center justify-between px-8 pt-8 pb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 px-4 sm:px-8 pt-6 sm:pt-8 pb-6">
         <div>
           <h1 className="text-2xl font-semibold text-[#171717]">Projects</h1>
           <p className="text-sm text-[#525252] mt-1">
@@ -86,7 +87,7 @@ export default function ProjectsPage() {
         </div>
         <Button
           onClick={() => setIsCreateDialogOpen(true)}
-          className="bg-[#18181B] hover:bg-[#27272A] text-white"
+          className="bg-[#18181B] hover:bg-[#27272A] text-white w-full sm:w-auto"
         >
           <Plus className="h-4 w-4 mr-2" />
           New Project
@@ -94,17 +95,17 @@ export default function ProjectsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="flex gap-6 px-8 pb-8 flex-1 min-h-0">
+      <div className="flex flex-col lg:flex-row gap-6 px-4 sm:px-8 pb-8 flex-1 min-h-0">
         {/* Filters Sidebar */}
-        <div className="w-64 flex-shrink-0">
+        <div className="w-full lg:w-64 flex-shrink-0">
           <ProjectFilters onFiltersChange={setFilters} />
         </div>
 
         {/* Projects Grid */}
         <div className="flex-1 min-w-0 flex flex-col">
           {isLoading ? (
-            <div className="border border-[#E5E5E5] rounded-lg p-12 text-center">
-              <div className="text-[#525252]">Loading projects...</div>
+            <div className="border border-[#E5E5E5] rounded-lg overflow-hidden bg-white">
+              <TableSkeleton rows={8} />
             </div>
           ) : (
             <>

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { createClientSchema, type CreateClientInput } from "@/lib/validations/client";
 import { Loader2 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface QuickClientDialogProps {
   open: boolean;
@@ -68,7 +69,7 @@ export function QuickClientDialog({
       form.reset();
       onOpenChange(false);
     } catch (error) {
-      console.error("Failed to create client:", error);
+      logger.error("Failed to create client", error, { action: "quick_create_client" });
       // You could add toast notification here
     }
   };

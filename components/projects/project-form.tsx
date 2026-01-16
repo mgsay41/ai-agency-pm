@@ -17,9 +17,11 @@ import {
 import { createProjectSchema, type CreateProjectInput } from "@/lib/validations/project";
 import { Loader2, Plus } from "lucide-react";
 import { QuickClientDialog } from "@/components/clients/quick-client-dialog";
+import { logger } from "@/lib/logger";
+import { formatDateForInput } from "@/lib/date-utils";
 
 interface ProjectFormProps {
-  onSubmit: (data: any) => Promise<void>;
+  onSubmit: (data: CreateProjectInput) => Promise<void>;
   onCancel: () => void;
   defaultValues?: Partial<CreateProjectInput>;
   isLoading?: boolean;
@@ -29,21 +31,6 @@ interface Client {
   id: string;
   companyName: string;
 }
-
-// Helper function to format Date to YYYY-MM-DD for input[type="date"]
-const formatDateForInput = (date: Date | string | undefined): string => {
-  if (!date) return "";
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (isNaN(d.getTime())) return "";
-  return d.toISOString().split("T")[0];
-};
-
-// Helper function to format date for display as DD/MM/YYYY
-const formatDateDisplay = (dateString: string): string => {
-  if (!dateString) return "";
-  const [year, month, day] = dateString.split("-");
-  return `${day}/${month}/${year}`;
-};
 
 export function ProjectForm({
   onSubmit,
@@ -60,21 +47,21 @@ export function ProjectForm({
   const formattedEndDate = formatDateForInput(defaultValues?.endDate);
 
   const form = useForm<CreateProjectInput>({
-    resolver: zodResolver(createProjectSchema) as any,
+    resolver: zodResolver(createProjectSchema),
     defaultValues: {
-      projectName: defaultValues?.projectName || "",
-      projectType: defaultValues?.projectType || "AI_AGENT",
-      status: defaultValues?.status || "PLANNING",
-      priority: defaultValues?.priority || "MEDIUM",
-      description: defaultValues?.description || "",
-      internalNotes: defaultValues?.internalNotes || "",
-      currency: defaultValues?.currency || "USD",
-      progressPercentage: defaultValues?.progressPercentage || 0,
-      startDate: defaultValues?.startDate || new Date(),
-      endDate: defaultValues?.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      clientId: defaultValues?.clientId || "",
-      budgetAmount: defaultValues?.budgetAmount || undefined,
-      estimatedHours: defaultValues?.estimatedHours || undefined,
+      projectName: defaultValues?.projectName ?? "",
+      projectType: defaultValues?.projectType ?? "AI_AGENT",
+      status: defaultValues?.status ?? "PLANNING",
+      priority: defaultValues?.priority ?? "MEDIUM",
+      description: defaultValues?.description ?? "",
+      internalNotes: defaultValues?.internalNotes ?? "",
+      currency: defaultValues?.currency ?? "USD",
+      progressPercentage: defaultValues?.progressPercentage ?? 0,
+      startDate: defaultValues?.startDate ?? new Date(),
+      endDate: defaultValues?.endDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      clientId: defaultValues?.clientId ?? "",
+      budgetAmount: defaultValues?.budgetAmount ?? undefined,
+      estimatedHours: defaultValues?.estimatedHours ?? undefined,
     },
   });
 
@@ -84,10 +71,17 @@ export function ProjectForm({
         const response = await fetch("/api/clients");
         if (response.ok) {
           const data = await response.json();
-          setClients(data.data || []);
+          // API returns { success: true, data: [...], pagination: {...} }
+          // The clients array is directly in data, not nested
+          if (data.success && Array.isArray(data.data)) {
+            setClients(data.data);
+          } else {
+            setClients([]);
+          }
         }
       } catch (error) {
-        console.error("Failed to fetch clients:", error);
+        logger.error("Failed to fetch clients", error, { action: "fetch_clients" });
+        setClients([]);
       } finally {
         setLoadingClients(false);
       }
@@ -99,7 +93,7 @@ export function ProjectForm({
     try {
       await onSubmit(data);
     } catch (error) {
-      console.error("Form submission error:", error);
+      logger.error("Form submission error", error, { action: "submit_project_form" });
     }
   };
 

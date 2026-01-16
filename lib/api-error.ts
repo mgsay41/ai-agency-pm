@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 /**
  * Standard API error response structure
@@ -149,7 +150,7 @@ export function handlePrismaError(
  * Handle generic errors
  */
 export function handleGenericError(error: unknown): NextResponse<ApiResponse> {
-  console.error("API Error:", error);
+  logger.error("API Error", error, { action: "handle_generic_error" });
 
   // Zod validation error
   if (error instanceof ZodError) {
@@ -235,6 +236,6 @@ export async function logActivity(
     });
   } catch (error) {
     // Log error but don't throw - activity logging should not break the main operation
-    console.error("Failed to log activity:", error);
+    logger.error("Failed to log activity", error, { action: "log_activity_helper" });
   }
 }

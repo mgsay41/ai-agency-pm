@@ -40,6 +40,9 @@ model ActionItem {
 
   @@index([meetingId])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([status, dueDate])
+  @@index([assignedTo, status])
 }
 
 model ActivityLog {
@@ -82,6 +85,9 @@ model Client {
 
   @@index([companyName])
   @@index([isActive])
+  // Composite indexes for common query patterns
+  @@index([isActive, clientType])
+  @@index([clientSince, isActive])
 }
 
 model ClientContact {
@@ -124,7 +130,7 @@ model Document {
 
 model Meeting {
   id               String            @id
-  projectId        String
+  projectId        String?
   meetingDate      DateTime
   durationMinutes  Int?
   meetingType      MeetingType
@@ -140,11 +146,14 @@ model Meeting {
   createdBy        String?
   ActionItem       ActionItem[]
   User             User?             @relation(fields: [createdBy], references: [id])
-  Project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  Project          Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
   MeetingAttendee  MeetingAttendee[]
 
   @@index([meetingDate])
   @@index([projectId])
+  // Composite indexes for common query patterns
+  @@index([projectId, meetingDate])
+  @@index([meetingType, meetingDate])
 }
 
 model MeetingAttendee {
@@ -202,6 +211,7 @@ model Project {
   healthStatus                      HealthStatus?
   isArchived                        Boolean             @default(false)
   archivedAt                        DateTime?
+  deletedAt                         DateTime?
   createdAt                         DateTime            @default(now())
   updatedAt                         DateTime
   createdBy                         String
@@ -223,6 +233,13 @@ model Project {
   @@index([priority])
   @@index([startDate])
   @@index([status])
+  // Composite indexes for common query patterns
+  @@index([status, priority])
+  @@index([clientId, status])
+  @@index([status, endDate])
+  @@index([isArchived, status])
+  @@index([deletedAt])
+  @@index([deletedAt, status])
 }
 
 model ProjectAssignment {

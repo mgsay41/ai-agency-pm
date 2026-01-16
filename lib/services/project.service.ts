@@ -80,7 +80,10 @@ export function formatProjectData(project: any) {
 export function buildProjectWhereClause(
   query: ProjectQueryInput
 ): Prisma.ProjectWhereInput {
-  const where: Prisma.ProjectWhereInput = {};
+  const where: Prisma.ProjectWhereInput = {
+    // Always filter out soft-deleted projects by default
+    deletedAt: null,
+  };
 
   // Status filter
   if (query.status && query.status.length > 0) {

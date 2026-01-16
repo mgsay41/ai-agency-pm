@@ -10,6 +10,7 @@ import {
   logActivity,
 } from "@/lib/api-error";
 import { getProjectById } from "@/lib/services/project.service";
+import { sanitizeFormData } from "@/lib/sanitize";
 
 /**
  * GET /api/projects/[id]
@@ -64,9 +65,12 @@ export async function PUT(
 
     const { id: projectId } = await params;
 
-    // Check if project exists
-    const existingProject = await db.project.findUnique({
-      where: { id: projectId },
+    // Check if project exists and is not deleted
+    const existingProject = await db.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+      },
       select: {
         id: true,
         projectName: true,
@@ -85,13 +89,19 @@ export async function PUT(
     // Validate input
     const validatedData: UpdateProjectInput = updateProjectSchema.parse(body);
 
+    // Sanitize input to prevent XSS
+    const sanitizedData = sanitizeFormData(validatedData, {
+      textarea: ["description", "internalNotes"],
+      plainText: ["projectName", "projectCode", "currentPhase"],
+    });
+
     // Track changes for activity log
     const changes: any = {};
-    Object.keys(validatedData).forEach((key) => {
-      if (validatedData[key as keyof UpdateProjectInput] !== undefined) {
+    Object.keys(sanitizedData).forEach((key) => {
+      if (sanitizedData[key as keyof UpdateProjectInput] !== undefined) {
         changes[key] = {
           old: (existingProject as any)[key],
-          new: validatedData[key as keyof UpdateProjectInput],
+          new: sanitizedData[key as keyof UpdateProjectInput],
         };
       }
     });
@@ -100,7 +110,7 @@ export async function PUT(
     const updatedProject = await db.project.update({
       where: { id: projectId },
       data: {
-        ...validatedData,
+        ...sanitizedData,
         lastModifiedBy: session.user.id,
         updatedAt: new Date(),
       },
@@ -153,7 +163,7 @@ export async function PUT(
 
 /**
  * DELETE /api/projects/[id]
- * Delete a project
+ * Soft delete a project (sets deletedAt timestamp)
  */
 export async function DELETE(
   request: NextRequest,
@@ -171,9 +181,12 @@ export async function DELETE(
 
     const { id: projectId } = await params;
 
-    // Check if project exists
-    const existingProject = await db.project.findUnique({
-      where: { id: projectId },
+    // Check if project exists and is not already deleted
+    const existingProject = await db.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+      },
       select: {
         id: true,
         projectName: true,
@@ -198,13 +211,21 @@ export async function DELETE(
       }
     );
 
-    // Delete project (cascade will handle related records)
-    await db.project.delete({
+    // Soft delete project (set deletedAt timestamp)
+    const deletedProject = await db.project.update({
       where: { id: projectId },
+      data: {
+        deletedAt: new Date(),
+        lastModifiedBy: session.user.id,
+        updatedAt: new Date(),
+      },
     });
 
     return createSuccessResponse(
-      { id: projectId },
+      {
+        id: projectId,
+        deletedAt: deletedProject.deletedAt,
+      },
       "Project deleted successfully"
     );
   } catch (error) {
