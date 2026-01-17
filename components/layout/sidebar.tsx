@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -24,26 +25,37 @@ const navigation = [
     name: "Dashboard",
     href: "/",
     icon: LayoutDashboard,
+    roles: ["ADMIN", "SALES", "TEAM_MEMBER"], // Available to all roles
   },
   {
     name: "Projects",
     href: "/projects",
     icon: FolderKanban,
+    roles: ["ADMIN", "SALES", "TEAM_MEMBER"], // Available to all roles
   },
   {
     name: "Clients",
     href: "/clients",
     icon: Users,
+    roles: ["ADMIN", "SALES"], // Only ADMIN and SALES can manage clients
   },
   {
     name: "Team",
     href: "/team",
     icon: UsersRound,
+    roles: ["ADMIN", "SALES", "TEAM_MEMBER"], // Available to all roles
   },
   {
     name: "Meetings",
     href: "/meetings",
     icon: Calendar,
+    roles: ["ADMIN", "SALES", "TEAM_MEMBER"], // Available to all roles
+  },
+  {
+    name: "Pending Approvals",
+    href: "/admin/pending-users",
+    icon: UserCheck,
+    roles: ["ADMIN"], // Only ADMIN can approve users
   },
 ];
 
@@ -94,28 +106,30 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1" aria-label="Main navigation">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              title={isCollapsed ? item.name : undefined}
-              aria-label={item.name}
-              aria-current={isActive ? "page" : undefined}
-              className={cn(
-                "flex items-center gap-3 rounded-md text-[15px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2",
-                isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
-                isActive
-                  ? "bg-[#18181B] text-white"
-                  : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
-              )}
-            >
-              <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-              {!isCollapsed && <span>{item.name}</span>}
-            </Link>
-          );
-        })}
+        {navigation
+          .filter((item) => !item.roles || item.roles.includes(user?.role as string))
+          .map((item) => {
+            const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                title={isCollapsed ? item.name : undefined}
+                aria-label={item.name}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex items-center gap-3 rounded-md text-[15px] transition-colors focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2",
+                  isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
+                  isActive
+                    ? "bg-[#18181B] text-white"
+                    : "text-[#525252] hover:bg-[#F4F4F5] hover:text-[#171717]"
+                )}
+              >
+                <item.icon className="h-5 w-5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                {!isCollapsed && <span>{item.name}</span>}
+              </Link>
+            );
+          })}
 
         <Separator className="my-4" role="separator" />
 

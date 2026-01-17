@@ -53,7 +53,7 @@ export function ProjectsGrid({
 
   const columns: ColumnDef<Project>[] = [
     {
-      accessorKey: "project_name",
+      accessorKey: "projectName",
       header: ({ column }) => {
         return (
           <Button
@@ -72,10 +72,10 @@ export function ProjectsGrid({
             href={`/projects/${row.original.id}`}
             className="font-medium text-[#171717] hover:text-[#18181B] hover:underline transition-colors"
           >
-            {row.original.project_name}
+            {row.original.projectName}
           </Link>
           <div className="text-xs text-[#A3A3A3]">
-            {row.original.project_code}
+            {row.original.projectCode}
           </div>
         </div>
       ),
@@ -106,7 +106,7 @@ export function ProjectsGrid({
       },
     },
     {
-      accessorKey: "client.company_name",
+      accessorKey: "Client.companyName",
       header: ({ column }) => {
         return (
           <Button
@@ -121,12 +121,12 @@ export function ProjectsGrid({
       },
       cell: ({ row }) => (
         <div className="text-[#171717]">
-          {row.original.client?.company_name || "N/A"}
+          {row.original.Client?.companyName || "N/A"}
         </div>
       ),
     },
     {
-      accessorKey: "start_date",
+      accessorKey: "startDate",
       header: ({ column }) => {
         return (
           <Button
@@ -141,12 +141,12 @@ export function ProjectsGrid({
       },
       cell: ({ row }) => (
         <div className="text-[#525252]">
-          {format(new Date(row.original.start_date), "MMM d, yyyy")}
+          {format(new Date(row.original.startDate), "MMM d, yyyy")}
         </div>
       ),
     },
     {
-      accessorKey: "end_date",
+      accessorKey: "endDate",
       header: ({ column }) => {
         return (
           <Button
@@ -161,7 +161,7 @@ export function ProjectsGrid({
       },
       cell: ({ row }) => (
         <div className="text-[#525252]">
-          {format(new Date(row.original.end_date), "MMM d, yyyy")}
+          {format(new Date(row.original.endDate), "MMM d, yyyy")}
         </div>
       ),
     },
@@ -191,7 +191,7 @@ export function ProjectsGrid({
       },
     },
     {
-      accessorKey: "project_type",
+      accessorKey: "projectType",
       header: ({ column }) => {
         return (
           <Button
@@ -206,19 +206,19 @@ export function ProjectsGrid({
       },
       cell: ({ row }) => (
         <div className="text-[#525252] text-sm">
-          {row.original.project_type.replace("_", " ")}
+          {row.original.projectType.replace("_", " ")}
         </div>
       ),
     },
     {
-      accessorKey: "assignments",
+      accessorKey: "ProjectAssignment",
       header: () => (
         <div className="px-2 text-xs uppercase tracking-wide font-medium">
           Team
         </div>
       ),
       cell: ({ row }) => {
-        const assignments = row.original.assignments || [];
+        const assignments = row.original.ProjectAssignment || [];
         if (assignments.length === 0) {
           return <div className="text-[#A3A3A3] text-xs">No team</div>;
         }
@@ -228,9 +228,9 @@ export function ProjectsGrid({
               <div
                 key={assignment.id}
                 className="w-8 h-8 rounded-full bg-[#18181B] text-white flex items-center justify-center text-xs font-medium border-2 border-white"
-                title={assignment.member.full_name}
+                title={assignment.TeamMember.fullName}
               >
-                {assignment.member.full_name
+                {assignment.TeamMember.fullName
                   .split(" ")
                   .map((n) => n[0])
                   .join("")
@@ -261,7 +261,7 @@ export function ProjectsGrid({
             size="sm"
             className="h-8 w-8 p-0 hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2"
             onClick={() => onEdit(row.original)}
-            aria-label={`Edit project ${row.original.project_name}`}
+            aria-label={`Edit project ${row.original.projectName}`}
           >
             <Pencil className="h-4 w-4 text-[#525252]" aria-hidden="true" />
           </Button>
@@ -270,7 +270,7 @@ export function ProjectsGrid({
             size="sm"
             className="h-8 w-8 p-0 hover:bg-[#FEF2F2] focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:ring-offset-2"
             onClick={() => onDelete(row.original)}
-            aria-label={`Delete project ${row.original.project_name}`}
+            aria-label={`Delete project ${row.original.projectName}`}
           >
             <Trash2 className="h-4 w-4 text-[#DC2626]" aria-hidden="true" />
           </Button>

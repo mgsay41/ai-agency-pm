@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2, ArrowUpDown } from "lucide-react";
+import { Pencil, Trash2, Archive, ArrowUpDown } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 export interface ClientGridItem {
   id: string;
@@ -69,10 +70,11 @@ export function ClientsGrid({
   onDelete,
 }: ClientsGridProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
+  const permissions = usePermissions();
 
   const columns: ColumnDef<ClientGridItem>[] = [
     {
-      accessorKey: "company_name",
+      accessorKey: "companyName",
       header: ({ column }) => {
         return (
           <Button
@@ -102,7 +104,7 @@ export function ClientsGrid({
       ),
     },
     {
-      accessorKey: "client_type",
+      accessorKey: "clientType",
       header: ({ column }) => {
         return (
           <Button
@@ -127,7 +129,7 @@ export function ClientsGrid({
       },
     },
     {
-      accessorKey: "primary_contact",
+      accessorKey: "primaryContact",
       header: () => (
         <div className="px-2 text-xs uppercase tracking-wide font-medium">
           Primary Contact
@@ -147,7 +149,7 @@ export function ClientsGrid({
       },
     },
     {
-      accessorKey: "company_size",
+      accessorKey: "companySize",
       header: ({ column }) => {
         return (
           <Button
@@ -225,7 +227,7 @@ export function ClientsGrid({
       },
     },
     {
-      accessorKey: "is_active",
+      accessorKey: "isActive",
       header: ({ column }) => {
         return (
           <Button
@@ -254,7 +256,7 @@ export function ClientsGrid({
       },
     },
     {
-      accessorKey: "client_since",
+      accessorKey: "clientSince",
       header: ({ column }) => {
         return (
           <Button
@@ -288,24 +290,33 @@ export function ClientsGrid({
       ),
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2"
-            onClick={() => onEdit(row.original)}
-            aria-label={`Edit client ${row.original.companyName}`}
-          >
-            <Pencil className="h-4 w-4 text-[#525252]" aria-hidden="true" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-[#FEF2F2] focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:ring-offset-2"
-            onClick={() => onDelete(row.original)}
-            aria-label={`Delete client ${row.original.companyName}`}
-          >
-            <Trash2 className="h-4 w-4 text-[#DC2626]" aria-hidden="true" />
-          </Button>
+          {permissions.canEditClient && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-[#18181B] focus:ring-offset-2"
+              onClick={() => onEdit(row.original)}
+              aria-label={`Edit client ${row.original.companyName}`}
+            >
+              <Pencil className="h-4 w-4 text-[#525252]" aria-hidden="true" />
+            </Button>
+          )}
+          {permissions.canDeleteClient && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-[#FEF2F2] focus:outline-none focus:ring-2 focus:ring-[#DC2626] focus:ring-offset-2"
+              onClick={() => onDelete(row.original)}
+              aria-label={`${permissions.canHardDeleteClient ? "Delete" : "Archive"} client ${row.original.companyName}`}
+              title={permissions.canHardDeleteClient ? "Delete client" : "Archive client (soft delete)"}
+            >
+              {permissions.canHardDeleteClient ? (
+                <Trash2 className="h-4 w-4 text-[#DC2626]" aria-hidden="true" />
+              ) : (
+                <Archive className="h-4 w-4 text-[#EA580C]" aria-hidden="true" />
+              )}
+            </Button>
+          )}
         </div>
       ),
     },

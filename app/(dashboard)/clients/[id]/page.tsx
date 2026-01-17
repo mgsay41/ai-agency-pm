@@ -19,25 +19,50 @@ import {
   Pencil,
   Plus,
   Trash2,
-  User,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useClient, useClientContacts } from "@/hooks/use-clients";
-import { toast } from "sonner";
 import Link from "next/link";
+import { ContactDialog } from "@/components/clients/contact-dialog";
+import type { ClientContactFormData } from "@/lib/validations/client";
+import { toast } from "sonner";
 
-// Contact Dialog Component (simplified version)
-function ContactDialog({
-  open,
-  onOpenChange,
-  clientId,
-  contact,
-  onSuccess,
-}: any) {
-  // This would be implemented with a full form
-  // For now, it's a placeholder
-  return null;
+// Type definitions
+interface ClientProject {
+  id: string;
+  projectName: string;
+  status: string;
+  startDate: string;
 }
+
+interface ClientContact {
+  id: string;
+  contactName: string;
+  jobTitle?: string;
+  email: string;
+  phone?: string;
+  isPrimary: boolean;
+}
+
+interface ClientDetail {
+  id: string;
+  companyName: string;
+  clientType: string;
+  isActive: boolean;
+  industry?: string;
+  website?: string;
+  billingAddress?: string;
+  timeZone?: string;
+  clientSince?: string;
+  preferredCommunication?: string[];
+  companySize?: string;
+  tags?: string[];
+  notes?: string;
+  projects?: ClientProject[];
+  totalProjectsCount?: number;
+}
+
+// Removed unused ContactDialog component and interface - will be implemented when needed
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -49,16 +74,82 @@ export default function ClientDetailPage() {
     contacts,
     loading: contactsLoading,
     fetchContacts,
+    addContact,
+    updateContact,
+    deleteContact,
   } = useClientContacts(clientId);
 
   const [activeTab, setActiveTab] = useState("overview");
+  const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [editingContact, setEditingContact] = useState<ClientContact | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (clientId) {
       fetchClient();
       fetchContacts();
     }
-  }, [clientId, fetchClient, fetchContacts]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]);
+
+  const handleAddContact = () => {
+    setEditingContact(null);
+    setIsContactDialogOpen(true);
+  };
+
+  const handleEditContact = (contact: ClientContact) => {
+    setEditingContact(contact);
+    setIsContactDialogOpen(true);
+  };
+
+  const handleSubmitContact = async (
+    data: Omit<ClientContactFormData, "clientId">
+  ) => {
+    try {
+      setIsSubmitting(true);
+
+      if (editingContact) {
+        await updateContact(editingContact.id, data);
+        toast.success("Contact updated successfully");
+      } else {
+        await addContact(data);
+        toast.success("Contact added successfully");
+      }
+
+      setIsContactDialogOpen(false);
+      setEditingContact(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save contact"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm("Are you sure you want to delete this contact?")) {
+      return;
+    }
+
+    try {
+      await deleteContact(contactId);
+      toast.success("Contact deleted successfully");
+      // Refresh client data to update counts
+      await fetchClient();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete contact";
+
+      // If contact was already deleted, just refresh the list
+      if (errorMessage.includes("not found") || errorMessage.includes("already deleted")) {
+        toast.info("Contact was already deleted");
+        await fetchContacts();
+        await fetchClient();
+      } else {
+        toast.error(errorMessage);
+      }
+    }
+  };
 
   if (loading) {
     return (
@@ -85,6 +176,9 @@ export default function ClientDetailPage() {
       </div>
     );
   }
+
+  // Type assertion with proper type
+  const clientData = client as ClientDetail;
 
   const clientTypeColors: Record<string, string> = {
     COMPANY: "bg-[#EFF6FF] text-[#2563EB]",
@@ -120,31 +214,31 @@ export default function ClientDetailPage() {
         <div className="flex items-start justify-between">
           <div className="flex gap-4">
             <div className="w-16 h-16 rounded-lg bg-[#18181B] text-white flex items-center justify-center text-2xl font-semibold">
-              {(client as any).companyName.charAt(0).toUpperCase()}
+              {clientData.companyName.charAt(0).toUpperCase()}
             </div>
             <div>
               <h1 className="text-2xl font-semibold text-[#171717] mb-2">
-                {(client as any).companyName}
+                {clientData.companyName}
               </h1>
               <div className="flex items-center gap-3">
                 <Badge
-                  className={`${clientTypeColors[(client as any).clientType] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
+                  className={`${clientTypeColors[clientData.clientType] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
                 >
-                  {(client as any).clientType}
+                  {clientData.clientType}
                 </Badge>
                 <Badge
                   className={`${
-                    (client as any).isActive
+                    clientData.isActive
                       ? "bg-[#F0FDF4] text-[#16A34A]"
                       : "bg-[#F5F5F5] text-[#737373]"
                   } rounded font-normal pointer-events-none`}
                 >
-                  {(client as any).isActive ? "Active" : "Inactive"}
+                  {clientData.isActive ? "Active" : "Inactive"}
                 </Badge>
-                {(client as any).industry && (
+                {clientData.industry && (
                   <span className="text-sm text-[#525252]">
                     <Building2 className="inline h-4 w-4 mr-1" />
-                    {(client as any).industry}
+                    {clientData.industry}
                   </span>
                 )}
               </div>
@@ -154,7 +248,7 @@ export default function ClientDetailPage() {
           <div className="text-right">
             <div className="text-sm text-[#A3A3A3]">Total Projects</div>
             <div className="text-3xl font-semibold text-[#171717]">
-              {(client as any).totalProjectsCount || 0}
+              {clientData.totalProjectsCount || 0}
             </div>
           </div>
         </div>
@@ -180,7 +274,7 @@ export default function ClientDetailPage() {
               value="projects"
               className="data-[state=active]:border-b-2 data-[state=active]:border-[#18181B] rounded-none"
             >
-              Projects ({(client as any).totalProjectsCount || 0})
+              Projects ({clientData.totalProjectsCount || 0})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -196,24 +290,24 @@ export default function ClientDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(client as any).website && (
+                {clientData.website && (
                   <div className="flex items-start gap-3">
                     <Globe className="h-5 w-5 text-[#525252] mt-0.5" />
                     <div>
                       <div className="text-xs text-[#A3A3A3] mb-1">Website</div>
                       <a
-                        href={(client as any).website}
+                        href={clientData.website}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[#2563EB] hover:underline"
                       >
-                        {(client as any).website}
+                        {clientData.website}
                       </a>
                     </div>
                   </div>
                 )}
 
-                {(client as any).billingAddress && (
+                {clientData.billingAddress && (
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-[#525252] mt-0.5" />
                     <div>
@@ -221,23 +315,23 @@ export default function ClientDetailPage() {
                         Billing Address
                       </div>
                       <div className="text-[#171717] whitespace-pre-line">
-                        {(client as any).billingAddress}
+                        {clientData.billingAddress}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {(client as any).timeZone && (
+                {clientData.timeZone && (
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-[#525252] mt-0.5" />
                     <div>
                       <div className="text-xs text-[#A3A3A3] mb-1">Time Zone</div>
-                      <div className="text-[#171717]">{(client as any).timeZone}</div>
+                      <div className="text-[#171717]">{clientData.timeZone}</div>
                     </div>
                   </div>
                 )}
 
-                {(client as any).clientSince && (
+                {clientData.clientSince && (
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-[#525252] mt-0.5" />
                     <div>
@@ -245,14 +339,14 @@ export default function ClientDetailPage() {
                         Client Since
                       </div>
                       <div className="text-[#171717]">
-                        {format(new Date((client as any).clientSince), "MMMM d, yyyy")}
+                        {format(new Date(clientData.clientSince), "MMMM d, yyyy")}
                       </div>
                     </div>
                   </div>
                 )}
 
-                {(client as any).preferredCommunication &&
-                  (client as any).preferredCommunication.length > 0 && (
+                {clientData.preferredCommunication &&
+                  clientData.preferredCommunication.length > 0 && (
                     <div className="flex items-start gap-3">
                       <Mail className="h-5 w-5 text-[#525252] mt-0.5" />
                       <div>
@@ -260,7 +354,7 @@ export default function ClientDetailPage() {
                           Preferred Communication
                         </div>
                         <div className="flex flex-wrap gap-2">
-                          {(client as any).preferredCommunication.map((method: string) => (
+                          {clientData.preferredCommunication.map((method) => (
                             <Badge
                               key={method}
                               className="bg-[#FAFAFA] text-[#525252] rounded font-normal pointer-events-none"
@@ -277,20 +371,20 @@ export default function ClientDetailPage() {
 
             {/* Quick Stats */}
             <div className="space-y-6">
-              {(client as any).companySize && (
+              {clientData.companySize && (
                 <Card className="border-[#E5E5E5] rounded-lg">
                   <CardContent className="pt-6">
                     <div className="text-xs text-[#A3A3A3] mb-1">
                       Company Size
                     </div>
                     <div className="text-2xl font-semibold text-[#171717]">
-                      {(client as any).companySize.replace("-", " - ")} employees
+                      {clientData.companySize.replace("-", " - ")} employees
                     </div>
                   </CardContent>
                 </Card>
               )}
 
-              {(client as any).tags && (client as any).tags.length > 0 && (
+              {clientData.tags && clientData.tags.length > 0 && (
                 <Card className="border-[#E5E5E5] rounded-lg">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-2 mb-3">
@@ -298,7 +392,7 @@ export default function ClientDetailPage() {
                       <div className="text-xs text-[#A3A3A3]">Tags</div>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {(client as any).tags.map((tag: string) => (
+                      {clientData.tags.map((tag) => (
                         <Badge
                           key={tag}
                           className="bg-[#FAFAFA] text-[#525252] rounded font-normal pointer-events-none"
@@ -313,7 +407,7 @@ export default function ClientDetailPage() {
             </div>
 
             {/* Notes */}
-            {(client as any).notes && (
+            {clientData.notes && (
               <Card className="border-[#E5E5E5] rounded-lg col-span-3">
                 <CardHeader className="pb-4">
                   <CardTitle className="text-lg font-semibold text-[#171717]">
@@ -322,7 +416,7 @@ export default function ClientDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <p className="text-[#525252] whitespace-pre-line">
-                    {(client as any).notes}
+                    {clientData.notes}
                   </p>
                 </CardContent>
               </Card>
@@ -339,6 +433,7 @@ export default function ClientDetailPage() {
             <Button
               className="bg-[#18181B] hover:bg-[#27272A] text-white"
               size="sm"
+              onClick={handleAddContact}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Contact
@@ -351,73 +446,78 @@ export default function ClientDetailPage() {
             </div>
           ) : contacts && contacts.length > 0 ? (
             <div className="grid grid-cols-2 gap-4">
-              {contacts.map((contact) => (
-                <Card key={contact.id} className="border-[#E5E5E5] rounded-lg">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex gap-3">
-                        <div className="w-12 h-12 rounded-full bg-[#FAFAFA] flex items-center justify-center text-lg font-medium text-[#525252]">
-                          {(contact as any).contactName
-                            .split(" ")
-                            .map((n: string) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-[#171717] flex items-center gap-2">
-                            {(contact as any).contactName}
-                            {(contact as any).isPrimary && (
-                              <Badge className="bg-[#EFF6FF] text-[#2563EB] rounded font-normal text-xs pointer-events-none">
-                                Primary
-                              </Badge>
+              {contacts.map((contact) => {
+                const typedContact = contact as ClientContact;
+                return (
+                  <Card key={typedContact.id} className="border-[#E5E5E5] rounded-lg">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex gap-3">
+                          <div className="w-12 h-12 rounded-full bg-[#FAFAFA] flex items-center justify-center text-lg font-medium text-[#525252]">
+                            {typedContact.contactName
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                              .slice(0, 2)}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-[#171717] flex items-center gap-2">
+                              {typedContact.contactName}
+                              {typedContact.isPrimary && (
+                                <Badge className="bg-[#EFF6FF] text-[#2563EB] rounded font-normal text-xs pointer-events-none">
+                                  Primary
+                                </Badge>
+                              )}
+                            </div>
+                            {typedContact.jobTitle && (
+                              <div className="text-sm text-[#525252]">
+                                {typedContact.jobTitle}
+                              </div>
                             )}
                           </div>
-                          {(contact as any).jobTitle && (
-                            <div className="text-sm text-[#525252]">
-                              {(contact as any).jobTitle}
-                            </div>
-                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-[#FAFAFA]"
+                            onClick={() => handleEditContact(typedContact)}
+                          >
+                            <Pencil className="h-3 w-3 text-[#525252]" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 hover:bg-[#FEF2F2]"
+                            onClick={() => handleDeleteContact(typedContact.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-[#DC2626]" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-[#FAFAFA]"
-                        >
-                          <Pencil className="h-3 w-3 text-[#525252]" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 hover:bg-[#FEF2F2]"
-                        >
-                          <Trash2 className="h-3 w-3 text-[#DC2626]" />
-                        </Button>
-                      </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-[#525252]" />
-                        <a
-                          href={`mailto:${contact.email}`}
-                          className="text-[#2563EB] hover:underline"
-                        >
-                          {contact.email}
-                        </a>
-                      </div>
-                      {contact.phone && (
-                        <div className="flex items-center gap-2 text-sm text-[#525252]">
-                          <Phone className="h-4 w-4" />
-                          {contact.phone}
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-4 w-4 text-[#525252]" />
+                          <a
+                            href={`mailto:${typedContact.email}`}
+                            className="text-[#2563EB] hover:underline"
+                          >
+                            {typedContact.email}
+                          </a>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                        {typedContact.phone && (
+                          <div className="flex items-center gap-2 text-sm text-[#525252]">
+                            <Phone className="h-4 w-4" />
+                            {typedContact.phone}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <div className="border border-[#E5E5E5] rounded-lg p-12 text-center">
@@ -444,9 +544,9 @@ export default function ClientDetailPage() {
             </Link>
           </div>
 
-          {(client as any).projects && (client as any).projects.length > 0 ? (
+          {clientData.projects && clientData.projects.length > 0 ? (
             <div className="space-y-4">
-              {(client as any).projects.map((project: any) => (
+              {clientData.projects.map((project) => (
                 <Card key={project.id} className="border-[#E5E5E5] rounded-lg">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
@@ -494,6 +594,20 @@ export default function ClientDetailPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Contact Dialog */}
+      <ContactDialog
+        open={isContactDialogOpen}
+        onOpenChange={(open) => {
+          setIsContactDialogOpen(open);
+          if (!open) {
+            setEditingContact(null);
+          }
+        }}
+        onSubmit={handleSubmitContact}
+        contact={editingContact}
+        isLoading={isSubmitting}
+      />
     </div>
   );
 }

@@ -51,7 +51,12 @@
       "Bash(npx shadcn@latest add:*)",
       "Bash(find:*)",
       "Bash(npm uninstall:*)",
-      "Bash(if exist .next rmdir /s /q .next)"
+      "Bash(if exist .next rmdir /s /q .next)",
+      "Bash(\"c:\\\\Users\\\\mgsay\\\\Downloads\\\\ai-agency-pm\\\\app\\\\api\\\\clients\\\\[id]\\\\route.ts\")",
+      "Bash(wc:*)",
+      "Bash(npx next lint)",
+      "Bash(nvm install:*)",
+      "Bash(where:*)"
     ]
   }
 }

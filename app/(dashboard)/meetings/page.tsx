@@ -9,11 +9,19 @@ import { MeetingDialog } from "@/components/meetings/meeting-dialog";
 import { MeetingFilters } from "@/components/meetings/meeting-filters";
 import { useMeetings } from "@/hooks/use-meetings";
 
+interface MeetingFiltersType {
+  search?: string;
+  meetingType?: string;
+  projectId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
 export default function MeetingsPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMeetingId, setEditingMeetingId] = useState<string | undefined>();
-  const [filters, setFilters] = useState<any>({});
+  const [filters, setFilters] = useState<MeetingFiltersType>({});
 
   const { meetings, isLoading, fetchMeetings, deleteMeeting, pagination } =
     useMeetings(filters);
@@ -21,6 +29,7 @@ export default function MeetingsPage() {
   // Fetch meetings on mount and when filters change
   useEffect(() => {
     fetchMeetings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
   const handleEdit = (meetingId: string) => {

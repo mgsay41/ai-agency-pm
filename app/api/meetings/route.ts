@@ -5,10 +5,14 @@ import { meetingSchema } from "@/lib/validations/meeting";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { sanitizeFormData } from "@/lib/sanitize";
+import { getUserMeetings } from "@/lib/resource-ownership";
+import { hasPermission, PERMISSIONS } from "@/lib/permissions";
 
 /**
  * GET /api/meetings
- * Fetch all meetings with filtering, search, sorting, and pagination
+ * Fetch meetings based on user role and participation
+ * - Admin: all meetings
+ * - Sales/Team Member: only meetings they participate in
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +24,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userId = session.user.id;
+    const userRole = session.user.role;
+
     const { searchParams } = new URL(request.url);
+
+    // Pagination
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "25");
+    const skip = (page - 1) * limit;
 
     // Filters
     const projectId = searchParams.get("projectId");
     const meetingType = searchParams.get("meetingType");
-    const search = searchParams.get("search") || "";
+    const search = searchParams.get("search");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
@@ -33,13 +45,36 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get("sortBy") || "meetingDate";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    // Pagination
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "25");
-    const skip = (page - 1) * limit;
+    // Build base where clause based on role
+    let baseWhere: any = {};
 
-    // Build where clause
-    const where: any = {};
+    if (hasPermission(userRole, PERMISSIONS.MEETING_VIEW_ALL)) {
+      // Admin can see all meetings
+      baseWhere = {};
+    } else if (hasPermission(userRole, PERMISSIONS.MEETING_VIEW_PARTICIPATING)) {
+      // Sales and Team Members can see meetings they participate in
+      baseWhere = {
+        OR: [
+          { createdBy: userId },
+          {
+            MeetingAttendee: {
+              some: {
+                memberId: userId,
+              },
+            },
+          },
+        ],
+      };
+    } else {
+      // No permission
+      return NextResponse.json(
+        { error: "Forbidden" },
+        { status: 403 }
+      );
+    }
+
+    // Add filters
+    const where: any = { ...baseWhere };
 
     if (projectId) {
       where.projectId = projectId;
@@ -51,12 +86,7 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        {
-          notes: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
+        ...(where.OR || []),
         {
           agenda: {
             contains: search,
@@ -64,17 +94,9 @@ export async function GET(request: NextRequest) {
           },
         },
         {
-          transcript: {
+          notes: {
             contains: search,
             mode: "insensitive",
-          },
-        },
-        {
-          Project: {
-            projectName: {
-              contains: search,
-              mode: "insensitive",
-            },
           },
         },
       ];
@@ -90,15 +112,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build orderBy
-    const orderBy: any = {};
-    orderBy[sortBy] = sortOrder;
-
-    // Fetch meetings with relations
+    // Fetch meetings with pagination
     const [meetings, total] = await Promise.all([
       db.meeting.findMany({
         where,
         include: {
+          MeetingAttendee: true,
+          ActionItem: true,
           Project: {
             select: {
               id: true,
@@ -106,39 +126,12 @@ export async function GET(request: NextRequest) {
               projectCode: true,
             },
           },
-          User: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-          MeetingAttendee: {
-            include: {
-              TeamMember: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  email: true,
-                  avatarColor: true,
-                },
-              },
-            },
-          },
-          ActionItem: {
-            include: {
-              TeamMember: {
-                select: {
-                  id: true,
-                  fullName: true,
-                },
-              },
-            },
-          },
         },
-        orderBy,
-        skip,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
         take: limit,
+        skip,
       }),
       db.meeting.count({ where }),
     ]);
@@ -165,6 +158,8 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/meetings
  * Create a new meeting
+ * - Admin/Sales: can create
+ * - Team Member: cannot create (403)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -174,6 +169,21 @@ export async function POST(request: NextRequest) {
 
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = session.user.role;
+
+    // Check permission to create meetings
+    if (!hasPermission(userRole, PERMISSIONS.MEETING_CREATE)) {
+      logger.warn("Meeting creation forbidden", {
+        userId: session.user.id,
+        role: userRole,
+        action: "create_meeting",
+      });
+      return NextResponse.json(
+        { error: "Forbidden: You don't have permission to create meetings" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -186,14 +196,14 @@ export async function POST(request: NextRequest) {
     });
 
     // Sanitize attendees
-    const sanitizedAttendees = sanitizedData.attendees?.map((attendee: any) => {
+    const sanitizedAttendees = sanitizedData.attendees?.map((attendee: { memberId?: string; externalName?: string; externalEmail?: string; attendeeType: string; attended?: boolean }) => {
       return sanitizeFormData(attendee, {
         plainText: ["externalName", "externalEmail"],
       });
     });
 
     // Sanitize action items
-    const sanitizedActionItems = sanitizedData.actionItems?.map((item: any) => {
+    const sanitizedActionItems = sanitizedData.actionItems?.map((item: { description: string; assignedTo?: string; dueDate?: Date; status?: string }) => {
       return sanitizeFormData(item, {
         textarea: ["description"],
       });
@@ -205,6 +215,64 @@ export async function POST(request: NextRequest) {
     // Handle "New Project" special value - set projectId to null
     const projectId = meetingData.projectId === "__new_project__" ? null : meetingData.projectId;
 
+    // Validate team member IDs before creating meeting
+    if (sanitizedAttendees && sanitizedAttendees.length > 0) {
+      const memberIds = sanitizedAttendees
+        .map((a: any) => a.memberId)
+        .filter(Boolean);
+
+      if (memberIds.length > 0) {
+        const validMembers = await db.teamMember.findMany({
+          where: {
+            id: { in: memberIds },
+            status: "ACTIVE"
+          },
+          select: { id: true }
+        });
+
+        if (validMembers.length !== memberIds.length) {
+          logger.error("Invalid team member IDs in meeting attendees", {
+            providedIds: memberIds,
+            validIds: validMembers.map(m => m.id),
+            action: "create_meeting"
+          });
+          return NextResponse.json(
+            { error: "Some team members not found or inactive" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validate action item assignees
+    if (sanitizedActionItems && sanitizedActionItems.length > 0) {
+      const assigneeIds = sanitizedActionItems
+        .map((item: any) => item.assignedTo)
+        .filter(Boolean);
+
+      if (assigneeIds.length > 0) {
+        const validAssignees = await db.teamMember.findMany({
+          where: {
+            id: { in: assigneeIds },
+            status: "ACTIVE"
+          },
+          select: { id: true }
+        });
+
+        if (validAssignees.length !== assigneeIds.length) {
+          logger.error("Invalid team member IDs in action item assignees", {
+            providedIds: assigneeIds,
+            validIds: validAssignees.map(m => m.id),
+            action: "create_meeting"
+          });
+          return NextResponse.json(
+            { error: "Some action item assignees not found or inactive" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Create meeting with attendees and action items
     const meeting = await db.meeting.create({
       data: {
@@ -215,7 +283,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
         MeetingAttendee: sanitizedAttendees
           ? {
-              create: sanitizedAttendees.map((attendee: any) => ({
+              create: sanitizedAttendees.map((attendee: { memberId?: string; externalName?: string; externalEmail?: string; attendeeType: string; attended?: boolean }) => ({
                 id: crypto.randomUUID(),
                 memberId: attendee.memberId,
                 externalName: attendee.externalName,
@@ -227,7 +295,7 @@ export async function POST(request: NextRequest) {
           : undefined,
         ActionItem: sanitizedActionItems
           ? {
-              create: sanitizedActionItems.map((item: any) => ({
+              create: sanitizedActionItems.map((item: { description: string; assignedTo?: string; dueDate?: Date; status?: string }) => ({
                 id: crypto.randomUUID(),
                 description: item.description,
                 assignedTo: item.assignedTo,
@@ -294,7 +362,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {

@@ -133,7 +133,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     // Actions - view only for their projects
     PERMISSIONS.ACTION_VIEW_PROJECT,
 
-    // Team - view assigned to their projects
+    // Team - view only, cannot add or edit
     PERMISSIONS.TEAM_VIEW_BASIC,
 
     // Dashboard

@@ -62,7 +62,7 @@ export const actionItemSchema = z.object({
     .max(500, "Description must be less than 500 characters")
     .trim(),
   assignedTo: z.string().optional(),
-  dueDate: z.date({
+  dueDate: z.coerce.date({
     message: "Please enter a valid due date",
   }).optional(),
   status: z.enum(actionItemStatusValues, {
@@ -75,7 +75,7 @@ export const meetingFormSchema = z.object({
   projectId: z
     .string({ message: "Please select a project" })
     .min(1, "Please select a project"),
-  meetingDate: z.date({
+  meetingDate: z.coerce.date({
     message: "Please enter a valid meeting date",
   }).optional(),
   durationMinutes: z
@@ -101,10 +101,21 @@ export const meetingFormSchema = z.object({
   transcript: z.string().optional(),
   recordingUrl: z
     .string()
-    .url("Please enter a valid recording URL (e.g., https://...)")
     .optional()
-    .or(z.literal("")),
-  nextMeetingDate: z.date({
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Please enter a valid recording URL (e.g., https://...)"
+    ),
+  nextMeetingDate: z.coerce.date({
     message: "Please enter a valid date for next meeting",
   }).optional(),
   nextMeetingNotes: z

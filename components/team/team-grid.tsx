@@ -18,21 +18,19 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Eye, Trash2 } from "lucide-react";
+import { Eye, Trash2 } from "lucide-react";
 import { TeamMember } from "@/hooks/use-team";
 import { DEPARTMENT_LABELS, STATUS_LABELS } from "@/lib/validations/team";
 
 interface TeamGridProps {
   teamMembers: TeamMember[];
-  onEdit: (member: TeamMember) => void;
   onView: (member: TeamMember) => void;
-  onDelete: (member: TeamMember) => void;
+  onDelete?: (member: TeamMember) => void;
   isLoading?: boolean;
 }
 
 export function TeamGrid({
   teamMembers,
-  onEdit,
   onView,
   onDelete,
   isLoading,
@@ -167,25 +165,21 @@ export function TeamGrid({
               size="sm"
               onClick={() => onView(member)}
               className="h-8 w-8 p-0"
+              title="View details"
             >
               <Eye className="h-4 w-4 text-[#525252]" />
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(member)}
-              className="h-8 w-8 p-0"
-            >
-              <Pencil className="h-4 w-4 text-[#525252]" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onDelete(member)}
-              className="h-8 w-8 p-0"
-            >
-              <Trash2 className="h-4 w-4 text-[#DC2626]" />
-            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onDelete(member)}
+                className="h-8 w-8 p-0"
+                title="Delete member"
+              >
+                <Trash2 className="h-4 w-4 text-[#DC2626]" />
+              </Button>
+            )}
           </div>
         );
       },

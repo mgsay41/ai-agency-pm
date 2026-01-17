@@ -11,22 +11,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TeamGrid } from "@/components/team/team-grid";
-import { TeamMemberDialog } from "@/components/team/team-member-dialog";
 import { useTeam, TeamMember } from "@/hooks/use-team";
-import { TeamMemberFormData } from "@/lib/validations/team";
 import { DEPARTMENT_LABELS, STATUS_LABELS } from "@/lib/validations/team";
-import { Plus, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/lib/logger";
+import { useRole } from "@/lib/hooks/use-role";
 
 export default function TeamPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { role } = useRole();
+  const isAdmin = role === "ADMIN";
   const {
     fetchTeamMembers,
-    createTeamMember,
-    updateTeamMember,
     deleteTeamMember,
     isLoading,
   } = useTeam();
@@ -44,18 +43,21 @@ export default function TeamPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
 
-  // Dialog state
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
-  const [dialogMode, setDialogMode] = useState<"create" | "edit">("create");
-
-  // Delete confirmation
+  // Delete confirmation (only for admin)
   const [deletingMember, setDeletingMember] = useState<TeamMember | null>(null);
 
   // Load team members
   const loadTeamMembers = async () => {
     try {
-      const filters: any = {
+      const filters: {
+        page: number;
+        limit: number;
+        sortBy: string;
+        sortOrder: "desc" | "asc";
+        search?: string;
+        status?: string;
+        department?: string;
+      } = {
         page: pagination.page,
         limit: pagination.limit,
         sortBy: "createdAt",
@@ -79,29 +81,27 @@ export default function TeamPage() {
     }
   };
 
+  // Load team members when filters change
   useEffect(() => {
     loadTeamMembers();
-  }, [pagination.page, search, statusFilter, departmentFilter]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, statusFilter, departmentFilter]);
+
+  // Load team members when page changes
+  useEffect(() => {
+    loadTeamMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page]);
 
   // Handlers
-  const handleCreate = () => {
-    setDialogMode("create");
-    setEditingMember(null);
-    setIsDialogOpen(true);
-  };
-
-  const handleEdit = (member: TeamMember) => {
-    setDialogMode("edit");
-    setEditingMember(member);
-    setIsDialogOpen(true);
-  };
-
   const handleView = (member: TeamMember) => {
     router.push(`/team/${member.id}`);
   };
 
   const handleDelete = (member: TeamMember) => {
-    setDeletingMember(member);
+    if (isAdmin) {
+      setDeletingMember(member);
+    }
   };
 
   const confirmDelete = async () => {
@@ -115,38 +115,10 @@ export default function TeamPage() {
       });
       setDeletingMember(null);
       loadTeamMembers();
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete team member",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSubmit = async (data: TeamMemberFormData) => {
-    try {
-      if (dialogMode === "create") {
-        await createTeamMember(data);
-        toast({
-          title: "Success",
-          description: "Team member created successfully",
-        });
-      } else if (editingMember) {
-        await updateTeamMember(editingMember.id, data);
-        toast({
-          title: "Success",
-          description: "Team member updated successfully",
-        });
-      }
-
-      setIsDialogOpen(false);
-      setEditingMember(null);
-      loadTeamMembers();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to save team member",
+        description: (error instanceof Error ? error.message : null) || "Failed to delete team member",
         variant: "destructive",
       });
     }
@@ -165,16 +137,11 @@ export default function TeamPage() {
         <div>
           <h1 className="text-2xl font-semibold text-[#171717]">Team</h1>
           <p className="text-sm text-[#525252] mt-1">
-            Manage team members and their assignments
+            {isAdmin
+              ? "Manage team members and their assignments"
+              : "View team members and their information"}
           </p>
         </div>
-        <Button
-          onClick={handleCreate}
-          className="bg-[#18181B] hover:bg-[#27272A]"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Team Member
-        </Button>
       </div>
 
       {/* Filters */}
@@ -234,9 +201,8 @@ export default function TeamPage() {
       {/* Team Grid */}
       <TeamGrid
         teamMembers={teamMembers}
-        onEdit={handleEdit}
         onView={handleView}
-        onDelete={handleDelete}
+        onDelete={isAdmin ? handleDelete : undefined}
         isLoading={isLoading}
       />
 
@@ -272,16 +238,6 @@ export default function TeamPage() {
           </div>
         </div>
       )}
-
-      {/* Team Member Dialog */}
-      <TeamMemberDialog
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onSubmit={handleSubmit}
-        defaultValues={editingMember || undefined}
-        isLoading={isLoading}
-        mode={dialogMode}
-      />
 
       {/* Delete Confirmation Dialog */}
       {deletingMember && (

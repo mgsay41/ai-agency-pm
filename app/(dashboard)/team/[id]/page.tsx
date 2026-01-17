@@ -32,6 +32,19 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
+interface ProjectAssignment {
+  id: string;
+  roleInProject: string;
+  allocationPercentage: number;
+  Project: {
+    id: string;
+    projectName: string;
+    Client?: {
+      companyName: string;
+    };
+  };
+}
+
 export default function TeamMemberDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -44,12 +57,6 @@ export default function TeamMemberDetailPage({ params }: PageProps) {
   useEffect(() => {
     params.then((p) => setResolvedId(p.id));
   }, [params]);
-
-  useEffect(() => {
-    if (resolvedId) {
-      loadMember();
-    }
-  }, [resolvedId]);
 
   const loadMember = async () => {
     if (!resolvedId) return;
@@ -67,6 +74,13 @@ export default function TeamMemberDetailPage({ params }: PageProps) {
     }
   };
 
+  useEffect(() => {
+    if (resolvedId) {
+      loadMember();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resolvedId]);
+
   const handleUpdate = async (data: TeamMemberFormData) => {
     if (!resolvedId) return;
 
@@ -78,10 +92,11 @@ export default function TeamMemberDetailPage({ params }: PageProps) {
       });
       setIsDialogOpen(false);
       loadMember();
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update team member";
       toast({
         title: "Error",
-        description: error.message || "Failed to update team member",
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -352,7 +367,7 @@ export default function TeamMemberDetailPage({ params }: PageProps) {
             <CardContent>
               {member.ProjectAssignment && member.ProjectAssignment.length > 0 ? (
                 <div className="space-y-4">
-                  {member.ProjectAssignment.map((assignment: any) => (
+                  {member.ProjectAssignment.map((assignment: ProjectAssignment) => (
                     <Link
                       key={assignment.id}
                       href={`/projects/${assignment.Project.id}`}

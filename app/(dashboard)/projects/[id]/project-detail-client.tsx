@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectDialog } from "@/components/projects/project-dialog";
 import { MeetingsGrid } from "@/components/meetings/meetings-grid";
 import { MeetingDialog } from "@/components/meetings/meeting-dialog";
+import { TeamAssignmentDialog } from "@/components/projects/team-assignment-dialog";
 import { ArrowLeft, Pencil, Calendar, DollarSign, Users, FileText, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -39,13 +40,19 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isMeetingDialogOpen, setIsMeetingDialogOpen] = useState(false);
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
+  const [hasFetched, setHasFetched] = useState(false);
 
   const { meetings, isLoading: meetingsLoading, fetchMeetings, deleteMeeting } =
     useMeetings({ projectId: project.id });
 
   useEffect(() => {
-    fetchMeetings();
-  }, [project.id]);
+    if (!hasFetched) {
+      fetchMeetings();
+      setHasFetched(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleUpdateProject = async (data: CreateProjectInput) => {
     setIsLoading(true);
@@ -65,7 +72,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
       toast.success("Project updated successfully");
       setIsEditDialogOpen(false);
       router.refresh();
-    } catch (error) {
+    } catch {
       toast.error("Failed to update project");
     } finally {
       setIsLoading(false);
@@ -89,7 +96,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-semibold text-[#171717]">
-                {project.project_name}
+                {project.projectName}
               </h1>
               <Badge
                 className={`${statusColors[project.status] || "bg-[#FAFAFA] text-[#525252]"} rounded font-normal pointer-events-none`}
@@ -102,7 +109,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                 {project.priority}
               </Badge>
             </div>
-            <p className="text-sm text-[#A3A3A3]">{project.project_code}</p>
+            <p className="text-sm text-[#A3A3A3]">{project.projectCode}</p>
           </div>
 
           <Button
@@ -141,13 +148,13 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                   <div>
                     <p className="text-xs text-[#A3A3A3]">Start Date</p>
                     <p className="text-sm font-medium text-[#171717]">
-                      {format(new Date(project.start_date), "MMM d, yyyy")}
+                      {format(new Date(project.startDate), "MMM d, yyyy")}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-[#A3A3A3]">End Date</p>
                     <p className="text-sm font-medium text-[#171717]">
-                      {format(new Date(project.end_date), "MMM d, yyyy")}
+                      {format(new Date(project.endDate), "MMM d, yyyy")}
                     </p>
                   </div>
                 </div>
@@ -167,8 +174,8 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                   <div>
                     <p className="text-xs text-[#A3A3A3]">Amount</p>
                     <p className="text-sm font-medium text-[#171717]">
-                      {project.budget_amount
-                        ? `${project.budget_currency || "USD"} ${project.budget_amount.toLocaleString()}`
+                      {project.budgetAmount
+                        ? `${project.currency || "USD"} ${project.budgetAmount.toLocaleString()}`
                         : "Not set"}
                     </p>
                   </div>
@@ -186,7 +193,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
               </CardHeader>
               <CardContent>
                 <p className="text-sm font-medium text-[#171717]">
-                  {project.assignments?.length || 0} assigned
+                  {project.ProjectAssignment?.length || 0} assigned
                 </p>
               </CardContent>
             </Card>
@@ -221,19 +228,19 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                 <div>
                   <dt className="text-xs text-[#A3A3A3]">Project Type</dt>
                   <dd className="text-sm font-medium text-[#171717] mt-1">
-                    {project.project_type.replace("_", " ")}
+                    {project.projectType.replace("_", " ")}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-[#A3A3A3]">Created</dt>
                   <dd className="text-sm font-medium text-[#171717] mt-1">
-                    {format(new Date(project.created_at), "MMM d, yyyy")}
+                    {format(new Date(project.createdAt), "MMM d, yyyy")}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-[#A3A3A3]">Last Updated</dt>
                   <dd className="text-sm font-medium text-[#171717] mt-1">
-                    {format(new Date(project.updated_at), "MMM d, yyyy")}
+                    {format(new Date(project.updatedAt), "MMM d, yyyy")}
                   </dd>
                 </div>
               </dl>
@@ -250,10 +257,10 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {project.client ? (
+              {project.Client ? (
                 <div>
                   <p className="text-lg font-semibold text-[#171717]">
-                    {project.client.company_name}
+                    {project.Client.companyName}
                   </p>
                 </div>
               ) : (
@@ -264,24 +271,35 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
         </TabsContent>
 
         {/* Team Tab */}
-        <TabsContent value="team">
+        <TabsContent value="team" className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[#171717]">Team Members</h3>
+              <p className="text-sm text-[#525252] mt-1">
+                Manage team member assignments and allocations
+              </p>
+            </div>
+            <Button
+              onClick={() => setIsTeamDialogOpen(true)}
+              className="bg-[#18181B] hover:bg-[#27272A]"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Team Member
+            </Button>
+          </div>
+
           <Card className="border-[#E5E5E5]">
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-[#525252]">
-                Team Members
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {project.assignments && project.assignments.length > 0 ? (
+            <CardContent className="pt-6">
+              {project.ProjectAssignment && project.ProjectAssignment.length > 0 ? (
                 <div className="space-y-4">
-                  {project.assignments.map((assignment) => (
+                  {project.ProjectAssignment.map((assignment) => (
                     <div
                       key={assignment.id}
                       className="flex items-center justify-between p-4 border border-[#E5E5E5] rounded-lg"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-[#18181B] text-white flex items-center justify-center text-sm font-medium">
-                          {assignment.member.full_name
+                          {assignment.TeamMember.fullName
                             .split(" ")
                             .map((n) => n[0])
                             .join("")
@@ -290,21 +308,35 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-[#171717]">
-                            {assignment.member.full_name}
+                            {assignment.TeamMember.fullName}
                           </p>
                           <p className="text-xs text-[#A3A3A3]">
-                            {assignment.role_in_project}
+                            {assignment.roleInProject}
                           </p>
                         </div>
                       </div>
                       <div className="text-sm text-[#525252]">
-                        {assignment.allocation_percentage}% allocated
+                        {assignment.allocationPercentage}% allocated
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-[#A3A3A3]">No team members assigned</p>
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Users className="h-12 w-12 text-[#A3A3A3] mb-4" />
+                  <h3 className="text-lg font-semibold text-[#171717] mb-2">No team members assigned</h3>
+                  <p className="text-[#525252] text-center max-w-md mb-4">
+                    Get started by assigning team members to this project.
+                  </p>
+                  <Button
+                    onClick={() => setIsTeamDialogOpen(true)}
+                    variant="outline"
+                    className="border-[#E5E5E5] hover:bg-[#FAFAFA]"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Team Member
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -330,7 +362,7 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
 
           <MeetingsGrid
             meetings={meetings}
-            onEdit={(id) => {
+            onEdit={() => {
               setIsMeetingDialogOpen(true);
             }}
             onDelete={deleteMeeting}
@@ -348,9 +380,9 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {project.internal_notes ? (
+              {project.internalNotes ? (
                 <p className="text-sm text-[#171717] whitespace-pre-wrap">
-                  {project.internal_notes}
+                  {project.internalNotes}
                 </p>
               ) : (
                 <p className="text-sm text-[#A3A3A3]">No internal notes</p>
@@ -366,6 +398,14 @@ export function ProjectDetailClient({ project }: ProjectDetailClientProps) {
         open={isMeetingDialogOpen}
         onOpenChange={setIsMeetingDialogOpen}
         onSuccess={fetchMeetings}
+      />
+
+      {/* Team Assignment Dialog */}
+      <TeamAssignmentDialog
+        projectId={project.id}
+        open={isTeamDialogOpen}
+        onOpenChange={setIsTeamDialogOpen}
+        onSuccess={() => router.refresh()}
       />
 
       {/* Edit Dialog */}

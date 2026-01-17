@@ -1,6 +1,18 @@
 /**
  * Date utility functions
  * Centralized date formatting and manipulation using date-fns
+ *
+ * IMPORTANT: Date Handling Standards
+ * ==================================
+ * 1. Database Storage: Prisma stores dates as DateTime (ISO 8601 strings in JSON)
+ * 2. API Responses: Always return dates as ISO 8601 strings
+ * 3. Frontend Types: Define date fields as `string` in TypeScript interfaces
+ * 4. Validation: Use z.coerce.date() in Zod schemas (converts to Date object for validation)
+ * 5. Display: Convert ISO strings to Date objects only when formatting for display
+ *
+ * Example Flow:
+ * Database → Prisma (ISO string) → API (ISO string) → Frontend (string type)
+ * → Display: parseISO(dateString) → format() → User sees formatted date
  */
 
 import {

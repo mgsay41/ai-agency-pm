@@ -29,17 +29,17 @@ export function ProjectDialog({
 
   const defaultValues: Partial<CreateProjectInput> | undefined = project
     ? {
-        projectName: project.project_name,
-        projectType: project.project_type as any,
+        projectName: project.projectName,
+        projectType: project.projectType as any,
         status: project.status as any,
         priority: project.priority as any,
         description: project.description || "",
-        internalNotes: project.internal_notes || "",
-        startDate: new Date(project.start_date),
-        endDate: new Date(project.end_date),
-        budgetAmount: project.budget_amount || undefined,
-        currency: project.budget_currency || "USD",
-        clientId: project.client_id,
+        internalNotes: project.internalNotes || "",
+        startDate: new Date(project.startDate),
+        endDate: new Date(project.endDate),
+        budgetAmount: project.budgetAmount || undefined,
+        currency: project.currency || "USD",
+        clientId: project.clientId,
       }
     : undefined;
 

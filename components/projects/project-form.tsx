@@ -19,6 +19,8 @@ import { Loader2, Plus } from "lucide-react";
 import { QuickClientDialog } from "@/components/clients/quick-client-dialog";
 import { logger } from "@/lib/logger";
 import { formatDateForInput } from "@/lib/date-utils";
+import { PROJECT } from "@/lib/constants";
+import { usePermissions } from "@/lib/hooks/use-permissions";
 
 interface ProjectFormProps {
   onSubmit: (data: CreateProjectInput) => Promise<void>;
@@ -38,9 +40,15 @@ export function ProjectForm({
   defaultValues,
   isLoading,
 }: ProjectFormProps) {
+  const permissions = usePermissions();
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [showClientDialog, setShowClientDialog] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  // Check if user can view budget fields and create clients
+  const showBudgetFields = permissions.canViewBudget;
+  const canAddClient = permissions.canCreateClient;
 
   // Format dates for the form
   const formattedStartDate = formatDateForInput(defaultValues?.startDate);
@@ -58,7 +66,7 @@ export function ProjectForm({
       currency: defaultValues?.currency ?? "USD",
       progressPercentage: defaultValues?.progressPercentage ?? 0,
       startDate: defaultValues?.startDate ?? new Date(),
-      endDate: defaultValues?.endDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      endDate: defaultValues?.endDate ?? new Date(Date.now() + PROJECT.DEFAULT_DURATION_DAYS * PROJECT.MS_PER_DAY),
       clientId: defaultValues?.clientId ?? "",
       budgetAmount: defaultValues?.budgetAmount ?? undefined,
       estimatedHours: defaultValues?.estimatedHours ?? undefined,
@@ -71,10 +79,9 @@ export function ProjectForm({
         const response = await fetch("/api/clients");
         if (response.ok) {
           const data = await response.json();
-          // API returns { success: true, data: [...], pagination: {...} }
-          // The clients array is directly in data, not nested
-          if (data.success && Array.isArray(data.data)) {
-            setClients(data.data);
+          // API returns { success: true, data: { clients: [...], pagination: {...} } }
+          if (data.success && data.data?.clients) {
+            setClients(data.data.clients);
           } else {
             setClients([]);
           }
@@ -91,9 +98,19 @@ export function ProjectForm({
 
   const handleSubmit = async (data: CreateProjectInput) => {
     try {
+      setServerError(null); // Clear previous errors
       await onSubmit(data);
     } catch (error) {
       logger.error("Form submission error", error, { action: "submit_project_form" });
+
+      // Extract error message
+      if (error instanceof Error) {
+        setServerError(error.message);
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        setServerError(String((error as { message: unknown }).message));
+      } else {
+        setServerError("An error occurred while saving the project. Please try again.");
+      }
     }
   };
 
@@ -106,6 +123,33 @@ export function ProjectForm({
 
   return (
     <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      {/* Server Error Display */}
+      {serverError && (
+        <div className="bg-[#FEF2F2] border border-[#DC2626] rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-[#DC2626]" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-[#DC2626]">Error</h3>
+              <p className="mt-1 text-sm text-[#991B1B]">{serverError}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setServerError(null)}
+              className="ml-auto flex-shrink-0 text-[#DC2626] hover:text-[#991B1B]"
+            >
+              <span className="sr-only">Dismiss</span>
+              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Basic Information Section */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-[#171717]">Basic Information</h3>
@@ -134,16 +178,18 @@ export function ProjectForm({
             <Label htmlFor="clientId">
               Client <span className="text-[#DC2626]">*</span>
             </Label>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setShowClientDialog(true)}
-              className="border-[#E5E5E5] hover:bg-[#FAFAFA] text-xs"
-            >
-              <Plus className="mr-1 h-3 w-3" />
-              Add Client
-            </Button>
+            {canAddClient && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowClientDialog(true)}
+                className="border-[#E5E5E5] hover:bg-[#FAFAFA] text-xs"
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add Client
+              </Button>
+            )}
           </div>
           <Select
             value={form.watch("clientId")}
@@ -312,42 +358,48 @@ export function ProjectForm({
           </div>
         </div>
 
-        {/* Budget and Hours */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="budgetAmount">Budget Amount</Label>
-            <Input
-              id="budgetAmount"
-              type="number"
-              step="0.01"
-              {...form.register("budgetAmount", { valueAsNumber: true })}
-              className="border-[#E5E5E5] focus:border-[#18181B]"
-              placeholder="0.00"
-            />
-            {form.formState.errors.budgetAmount && (
-              <p className="text-sm text-[#DC2626]">
-                {form.formState.errors.budgetAmount.message}
-              </p>
-            )}
-          </div>
+        {/* Budget and Hours - Admin Only */}
+        {showBudgetFields && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="budgetAmount">
+                Budget Amount <span className="text-[#DC2626]">*</span>
+              </Label>
+              <Input
+                id="budgetAmount"
+                type="number"
+                step="0.01"
+                {...form.register("budgetAmount", { valueAsNumber: true })}
+                className="border-[#E5E5E5] focus:border-[#18181B]"
+                placeholder="0.00"
+              />
+              {form.formState.errors.budgetAmount && (
+                <p className="text-sm text-[#DC2626]">
+                  {form.formState.errors.budgetAmount.message}
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="estimatedHours">Estimated Hours</Label>
-            <Input
-              id="estimatedHours"
-              type="number"
-              step="0.5"
-              {...form.register("estimatedHours", { valueAsNumber: true })}
-              className="border-[#E5E5E5] focus:border-[#18181B]"
-              placeholder="0"
-            />
-            {form.formState.errors.estimatedHours && (
-              <p className="text-sm text-[#DC2626]">
-                {form.formState.errors.estimatedHours.message}
-              </p>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="estimatedHours">
+                Estimated Hours <span className="text-[#DC2626]">*</span>
+              </Label>
+              <Input
+                id="estimatedHours"
+                type="number"
+                step="0.5"
+                {...form.register("estimatedHours", { valueAsNumber: true })}
+                className="border-[#E5E5E5] focus:border-[#18181B]"
+                placeholder="0"
+              />
+              {form.formState.errors.estimatedHours && (
+                <p className="text-sm text-[#DC2626]">
+                  {form.formState.errors.estimatedHours.message}
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Form Actions */}

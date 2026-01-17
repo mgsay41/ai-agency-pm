@@ -5,10 +5,14 @@ import { meetingUpdateSchema } from "@/lib/validations/meeting";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { sanitizeFormData } from "@/lib/sanitize";
+import { canAccessMeeting } from "@/lib/resource-ownership";
+import { canEditMeeting, canDeleteMeeting } from "@/lib/permissions";
 
 /**
  * GET /api/meetings/[id]
  * Fetch a single meeting by ID
+ * - Admin: can view all meetings
+ * - Sales/Team Member: can only view meetings they participate in
  */
 export async function GET(
   request: NextRequest,
@@ -23,63 +27,31 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Meeting ID is required" },
+        { status: 400 }
+      );
+    }
 
-    const meeting = await db.meeting.findUnique({
-      where: { id },
-      include: {
-        Project: {
-          select: {
-            id: true,
-            projectName: true,
-            projectCode: true,
-            Client: {
-              select: {
-                id: true,
-                companyName: true,
-              },
-            },
-          },
-        },
-        User: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        MeetingAttendee: {
-          include: {
-            TeamMember: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                avatarColor: true,
-                roleTitle: true,
-              },
-            },
-          },
-        },
-        ActionItem: {
-          include: {
-            TeamMember: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "asc",
-          },
-        },
-      },
-    });
+    const { id } = resolvedParams;
+    const userId = session.user.id;
+    const userRole = session.user.role;
+
+    // Check if user can access this meeting
+    const meeting = await canAccessMeeting(userId, id, userRole);
 
     if (!meeting) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+      logger.warn("Meeting access denied", {
+        userId,
+        meetingId: id,
+        role: userRole,
+      });
+      return NextResponse.json(
+        { error: "Meeting not found or access denied" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({
@@ -98,6 +70,9 @@ export async function GET(
 /**
  * PUT /api/meetings/[id]
  * Update a meeting
+ * - Admin: can edit any meeting
+ * - Sales: can edit only their own meetings
+ * - Team Member: read-only (403)
  */
 export async function PUT(
   request: NextRequest,
@@ -112,15 +87,51 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Meeting ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
+    const userId = session.user.id;
+    const userRole = session.user.role;
 
     // Check if meeting exists
     const existingMeeting = await db.meeting.findUnique({
       where: { id },
+      select: {
+        id: true,
+        createdBy: true,
+      },
     });
 
     if (!existingMeeting) {
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    }
+
+    // Check edit permission
+    const createdBy = existingMeeting.createdBy;
+    if (!createdBy) {
+      return NextResponse.json(
+        { error: "Meeting has no creator - cannot determine edit permissions" },
+        { status: 400 }
+      );
+    }
+
+    if (!canEditMeeting(userRole, createdBy, userId)) {
+      logger.warn("Meeting edit forbidden", {
+        userId,
+        meetingId: id,
+        role: userRole,
+        createdBy,
+      });
+      return NextResponse.json(
+        { error: "Forbidden: You don't have permission to edit this meeting" },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
@@ -133,20 +144,21 @@ export async function PUT(
     });
 
     // Sanitize attendees
-    const sanitizedAttendees = sanitizedData.attendees?.map((attendee: any) => {
+    const sanitizedAttendees = sanitizedData.attendees?.map((attendee: { memberId?: string; externalName?: string; externalEmail?: string; attendeeType: string; attended?: boolean }) => {
       return sanitizeFormData(attendee, {
         plainText: ["externalName", "externalEmail"],
       });
     });
 
     // Sanitize action items
-    const sanitizedActionItems = sanitizedData.actionItems?.map((item: any) => {
+    const sanitizedActionItems = sanitizedData.actionItems?.map((item: { description: string; assignedTo?: string; dueDate?: Date; status?: string }) => {
       return sanitizeFormData(item, {
         textarea: ["description"],
       });
     });
 
     // Extract attendees and action items
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { attendees, actionItems, ...meetingData } = sanitizedData;
 
     // Update meeting
@@ -189,6 +201,54 @@ export async function PUT(
       },
     });
 
+    // Validate team member IDs in attendees before updating
+    if (sanitizedAttendees) {
+      const memberIds = sanitizedAttendees
+        .map((a: any) => a.memberId)
+        .filter(Boolean);
+
+      if (memberIds.length > 0) {
+        const validMembers = await db.teamMember.findMany({
+          where: {
+            id: { in: memberIds },
+            status: "ACTIVE"
+          },
+          select: { id: true }
+        });
+
+        if (validMembers.length !== memberIds.length) {
+          return NextResponse.json(
+            { error: "Some team members not found or inactive" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validate team member IDs in action item assignees before updating
+    if (sanitizedActionItems) {
+      const assigneeIds = sanitizedActionItems
+        .map((item: any) => item.assignedTo)
+        .filter(Boolean);
+
+      if (assigneeIds.length > 0) {
+        const validAssignees = await db.teamMember.findMany({
+          where: {
+            id: { in: assigneeIds },
+            status: "ACTIVE"
+          },
+          select: { id: true }
+        });
+
+        if (validAssignees.length !== assigneeIds.length) {
+          return NextResponse.json(
+            { error: "Some action item assignees not found or inactive" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // If attendees are provided, update them
     if (sanitizedAttendees) {
       // Delete existing attendees
@@ -198,7 +258,7 @@ export async function PUT(
 
       // Create new attendees
       await db.meetingAttendee.createMany({
-        data: sanitizedAttendees.map((attendee: any) => ({
+        data: sanitizedAttendees.map((attendee: { memberId?: string; externalName?: string; externalEmail?: string; attendeeType: string; attended?: boolean }) => ({
           id: crypto.randomUUID(),
           meetingId: id,
           memberId: attendee.memberId,
@@ -219,7 +279,7 @@ export async function PUT(
 
       // Create new action items
       await db.actionItem.createMany({
-        data: sanitizedActionItems.map((item: any) => ({
+        data: sanitizedActionItems.map((item: { description: string; assignedTo?: string; dueDate?: Date; status?: string }) => ({
           id: crypto.randomUUID(),
           meetingId: id,
           description: item.description,
@@ -247,7 +307,7 @@ export async function PUT(
       success: true,
       data: meeting,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -269,6 +329,9 @@ export async function PUT(
 /**
  * DELETE /api/meetings/[id]
  * Delete a meeting
+ * - Admin: can delete any meeting
+ * - Sales: can delete only their own meetings
+ * - Team Member: cannot delete (403)
  */
 export async function DELETE(
   request: NextRequest,
@@ -283,15 +346,54 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await params;
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Meeting ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
+    const userId = session.user.id;
+    const userRole = session.user.role;
 
     // Check if meeting exists
     const meeting = await db.meeting.findUnique({
       where: { id },
+      select: {
+        id: true,
+        createdBy: true,
+        projectId: true,
+        meetingType: true,
+        meetingDate: true,
+      },
     });
 
     if (!meeting) {
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    }
+
+    // Check delete permission
+    const createdBy = meeting.createdBy;
+    if (!createdBy) {
+      return NextResponse.json(
+        { error: "Meeting has no creator - cannot determine delete permissions" },
+        { status: 400 }
+      );
+    }
+
+    if (!canDeleteMeeting(userRole, createdBy, userId)) {
+      logger.warn("Meeting delete forbidden", {
+        userId,
+        meetingId: id,
+        role: userRole,
+        createdBy,
+      });
+      return NextResponse.json(
+        { error: "Forbidden: You don't have permission to delete this meeting" },
+        { status: 403 }
+      );
     }
 
     // Delete meeting (cascade will handle attendees and action items)

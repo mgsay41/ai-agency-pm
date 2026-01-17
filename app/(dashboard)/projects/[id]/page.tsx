@@ -23,7 +23,7 @@ export async function generateMetadata({
   const project = await getProject(id);
 
   return {
-    title: project ? `${project.project_name} - AI Agency PM` : "Project Not Found",
+    title: project ? `${project.projectName} - AI Agency PM` : "Project Not Found",
     description: project?.description || "Project details",
   };
 }

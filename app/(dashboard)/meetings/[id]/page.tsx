@@ -22,7 +22,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -31,12 +30,62 @@ import { meetingTypeLabels, actionItemStatusLabels } from "@/lib/validations/mee
 import { MeetingDialog } from "@/components/meetings/meeting-dialog";
 import { logger } from "@/lib/logger";
 
+// Type definitions
+interface MeetingAttendee {
+  id: string;
+  attendeeType: string;
+  name?: string;
+  email?: string;
+  externalName?: string;
+  externalEmail?: string;
+  attended?: boolean;
+  TeamMember?: {
+    fullName: string;
+    roleTitle?: string;
+    avatarColor?: string;
+  };
+}
+
+interface ActionItem {
+  id: string;
+  description: string;
+  status: string;
+  dueDate?: string;
+  assignedTo?: string;
+  TeamMember?: {
+    fullName: string;
+  };
+}
+
+interface MeetingDetail {
+  id: string;
+  meetingDate: string;
+  durationMinutes?: number;
+  meetingType: string;
+  locationPlatform?: string;
+  agenda?: string;
+  notes?: string;
+  transcript?: string;
+  recordingUrl?: string;
+  nextMeetingDate?: string;
+  nextMeetingNotes?: string;
+  Project?: {
+    id: string;
+    projectName: string;
+    Client?: {
+      companyName: string;
+    };
+  };
+  MeetingAttendee: MeetingAttendee[];
+  ActionItem: ActionItem[];
+}
+
 export default function MeetingDetailPage() {
   const router = useRouter();
   const params = useParams();
   const meetingId = params?.id as string;
 
-  const [meeting, setMeeting] = useState<any>(null);
+  const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { getMeeting } = useMeetings();
@@ -66,12 +115,6 @@ export default function MeetingDetailPage() {
     }
   };
 
-  useEffect(() => {
-    if (meetingId) {
-      loadMeeting();
-    }
-  }, [meetingId]);
-
   const loadMeeting = async () => {
     setIsLoading(true);
     try {
@@ -83,6 +126,13 @@ export default function MeetingDetailPage() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (meetingId) {
+      loadMeeting();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meetingId]);
 
   const handleDownloadTranscript = () => {
     if (!meeting?.transcript) return;
@@ -230,20 +280,22 @@ export default function MeetingDetailPage() {
 
               <Separator className="bg-[#E5E5E5]" />
 
-              <div>
-                <Link
-                  href={`/projects/${meeting.Project.id}`}
-                  className="text-[#2563EB] hover:underline flex items-center gap-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  {meeting.Project.projectName}
-                </Link>
-                {meeting.Project.Client && (
-                  <p className="text-sm text-[#525252] mt-1">
-                    Client: {meeting.Project.Client.companyName}
-                  </p>
-                )}
-              </div>
+              {meeting.Project && (
+                <div>
+                  <Link
+                    href={`/projects/${meeting.Project.id}`}
+                    className="text-[#2563EB] hover:underline flex items-center gap-2"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    {meeting.Project.projectName}
+                  </Link>
+                  {meeting.Project.Client && (
+                    <p className="text-sm text-[#525252] mt-1">
+                      Client: {meeting.Project.Client.companyName}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {meeting.recordingUrl && (
                 <div>
@@ -343,7 +395,7 @@ export default function MeetingDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {meeting.MeetingAttendee.map((attendee: any) => (
+                {meeting.MeetingAttendee.map((attendee: MeetingAttendee) => (
                   <div
                     key={attendee.id}
                     className="flex items-center justify-between p-2 rounded border border-[#E5E5E5]"
@@ -400,7 +452,7 @@ export default function MeetingDetailPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {meeting.ActionItem.map((item: any) => (
+                  {meeting.ActionItem.map((item: ActionItem) => (
                     <div
                       key={item.id}
                       className="p-3 rounded border border-[#E5E5E5] space-y-2"

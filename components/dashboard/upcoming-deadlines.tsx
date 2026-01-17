@@ -110,7 +110,7 @@ export function UpcomingDeadlines() {
       <CardContent className="space-y-2">
         {stats.upcomingDeadlines.map((project, index) => {
           const daysUntilDeadline = Math.ceil(
-            (new Date(project.end_date).getTime() - new Date().getTime()) /
+            (new Date(project.endDate).getTime() - new Date().getTime()) /
               (1000 * 60 * 60 * 24)
           );
           const isUrgent = daysUntilDeadline <= 2;
@@ -130,11 +130,11 @@ export function UpcomingDeadlines() {
                         </div>
                       )}
                       <h4 className="font-semibold text-sm text-[#171717] truncate group-hover:text-[#18181B]">
-                        {project.project_name}
+                        {project.projectName}
                       </h4>
                     </div>
                     <p className="text-xs text-[#525252] mb-3">
-                      {project.client_name}
+                      {project.clientName}
                     </p>
                     <div className="flex items-center gap-2 flex-wrap">
                       <Badge
@@ -162,7 +162,7 @@ export function UpcomingDeadlines() {
                           isUrgent ? "text-[#DC2626]" : "text-[#171717]"
                         }`}
                       >
-                        {format(new Date(project.end_date), "MMM d")}
+                        {format(new Date(project.endDate), "MMM d")}
                       </p>
                       <p
                         className={`text-xs ${

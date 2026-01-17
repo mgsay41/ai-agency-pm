@@ -5,32 +5,35 @@ import { useRouter } from "next/navigation";
 
 export interface Project {
   id: string;
-  project_code: string;
-  project_name: string;
-  project_type: string;
+  projectCode: string;
+  projectName: string;
+  projectType: string;
   status: string;
   priority: string;
   description: string | null;
-  internal_notes: string | null;
-  start_date: string;
-  end_date: string;
-  budget_amount: number | null;
-  budget_currency: string | null;
-  client_id: string;
-  created_by_id: string;
-  created_at: string;
-  updated_at: string;
-  client?: {
+  internalNotes: string | null;
+  startDate: string;
+  endDate: string;
+  budgetAmount: number | null;
+  currency: string;
+  clientId: string;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  Client?: {
     id: string;
-    company_name: string;
+    companyName: string;
   };
-  assignments?: Array<{
+  ProjectAssignment?: Array<{
     id: string;
-    role_in_project: string;
-    allocation_percentage: number;
-    member: {
+    roleInProject: string;
+    allocationPercentage: number;
+    TeamMember: {
       id: string;
-      full_name: string;
+      fullName: string;
+      email: string;
+      roleTitle: string | null;
+      avatarColor: string | null;
     };
   }>;
 }
@@ -38,8 +41,8 @@ export interface Project {
 export interface ProjectFilters {
   status?: string[];
   priority?: string[];
-  client_id?: string;
-  project_type?: string;
+  clientId?: string;
+  projectType?: string;
   search?: string;
 }
 
@@ -77,11 +80,11 @@ export function useProjects() {
         if (filters?.priority && filters.priority.length > 0) {
           params.append("priority", filters.priority.join(","));
         }
-        if (filters?.client_id) {
-          params.append("client_id", filters.client_id);
+        if (filters?.clientId) {
+          params.append("clientId", filters.clientId);
         }
-        if (filters?.project_type) {
-          params.append("project_type", filters.project_type);
+        if (filters?.projectType) {
+          params.append("projectType", filters.projectType);
         }
         if (filters?.search) {
           params.append("search", filters.search);
@@ -148,7 +151,7 @@ export function useProjects() {
 
       try {
         const response = await fetch(`/api/projects/${id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },

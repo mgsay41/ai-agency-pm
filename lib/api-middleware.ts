@@ -21,6 +21,7 @@ import { db } from "@/lib/db";
 export interface AuthContext {
   session: Session;
   user: Session["user"];
+  params?: Record<string, string>;
 }
 
 /**
@@ -44,8 +45,14 @@ export type AuthenticatedHandler<T = unknown> = (
  */
 export function withAuth<T = unknown>(
   handler: AuthenticatedHandler<T>
-): (request: NextRequest) => Promise<NextResponse<T>> {
-  return async (request: NextRequest) => {
+): (
+  request: NextRequest,
+  context?: { params: Promise<Record<string, string>> }
+) => Promise<NextResponse<T>> {
+  return async (
+    request: NextRequest,
+    routeContext?: { params: Promise<Record<string, string>> }
+  ) => {
     try {
       const session = await auth.api.getSession({
         headers: request.headers,
@@ -58,9 +65,13 @@ export function withAuth<T = unknown>(
         ) as NextResponse<T>;
       }
 
+      // Await params if provided (Next.js 15+)
+      const params = routeContext?.params ? await routeContext.params : undefined;
+
       const context: AuthContext = {
         session,
         user: session.user,
+        params,
       };
 
       return await handler(request, context);
@@ -86,7 +97,10 @@ export function withAuth<T = unknown>(
 export function withRole<T = unknown>(
   allowedRoles: string[],
   handler: AuthenticatedHandler<T>
-): (request: NextRequest) => Promise<NextResponse<T>> {
+): (
+  request: NextRequest,
+  context?: { params: Promise<Record<string, string>> }
+) => Promise<NextResponse<T>> {
   return withAuth(async (request, context) => {
     const userRole = context.user.role as string;
 
@@ -167,7 +181,10 @@ export function withRole<T = unknown>(
 export function withPermission<T = unknown>(
   requiredPermissions: Permission | Permission[],
   handler: AuthenticatedHandler<T>
-): (request: NextRequest) => Promise<NextResponse<T>> {
+): (
+  request: NextRequest,
+  context?: { params: Promise<Record<string, string>> }
+) => Promise<NextResponse<T>> {
   return withAuth(async (request, context) => {
     const userRole = context.user.role as Role;
 
@@ -250,6 +267,7 @@ async function logAuthorizationFailure(
   try {
     await db.activityLog.create({
       data: {
+        id: crypto.randomUUID(),
         userId,
         entityType: "authorization",
         entityId: endpoint,

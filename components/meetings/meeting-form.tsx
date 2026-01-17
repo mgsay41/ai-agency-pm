@@ -65,6 +65,7 @@ export function MeetingForm({
     watch,
     setValue,
     control,
+    reset,
     formState: { errors },
   } = useForm<MeetingFormInput>({
     resolver: zodResolver(meetingFormSchema),
@@ -102,6 +103,40 @@ export function MeetingForm({
     control,
     name: "actionItems",
   });
+
+  // Update form when defaultValues changes (for edit mode)
+  useEffect(() => {
+    if (defaultValues) {
+      // Log for debugging
+      console.log("Updating form with defaultValues:", defaultValues);
+
+      reset({
+        projectId: projectId || defaultValues?.projectId || "",
+        meetingType: defaultValues?.meetingType || "INTERNAL_SYNC",
+        durationMinutes: defaultValues?.durationMinutes,
+        locationPlatform: defaultValues?.locationPlatform || "",
+        agenda: defaultValues?.agenda || "",
+        notes: defaultValues?.notes || "",
+        transcript: defaultValues?.transcript || "",
+        recordingUrl: defaultValues?.recordingUrl || "",
+        nextMeetingNotes: defaultValues?.nextMeetingNotes || "",
+        attendees: defaultValues?.attendees || [],
+        actionItems: defaultValues?.actionItems || [],
+      });
+
+      // Update date states
+      if (defaultValues?.meetingDate) {
+        const parsedDate = new Date(defaultValues.meetingDate);
+        console.log("Setting meeting date:", parsedDate);
+        setMeetingDate(parsedDate);
+      }
+      if (defaultValues?.nextMeetingDate) {
+        const parsedNextDate = new Date(defaultValues.nextMeetingDate);
+        console.log("Setting next meeting date:", parsedNextDate);
+        setNextMeetingDate(parsedNextDate);
+      }
+    }
+  }, [defaultValues, projectId, reset]);
 
   // Fetch team members
   useEffect(() => {
@@ -142,8 +177,14 @@ export function MeetingForm({
   }, [projectId]);
 
   const handleFormSubmit = async (data: MeetingFormInput) => {
+    console.log("Form submit handler called");
+    console.log("Form data:", data);
+    console.log("Meeting date:", meetingDate);
+    console.log("Form errors:", errors);
+
     // Validate that meetingDate is selected
     if (!meetingDate) {
+      console.error("Meeting date is not selected!");
       return;
     }
 
@@ -152,11 +193,16 @@ export function MeetingForm({
       meetingDate: meetingDate,
       nextMeetingDate: nextMeetingDate || undefined,
     };
+    console.log("Calling onSubmit with:", submitData);
     await onSubmit(submitData);
   };
 
+  const onInvalid = (errors: any) => {
+    console.error("Form validation failed with errors:", errors);
+  };
+
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-8">
+    <form onSubmit={handleSubmit(handleFormSubmit, onInvalid)} className="space-y-8">
       {/* Basic Information */}
       <div className="space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
@@ -704,6 +750,12 @@ export function MeetingForm({
         <Button
           type="submit"
           disabled={isLoading || !meetingDate}
+          onClick={() => {
+            console.log("Submit button clicked!");
+            console.log("Is disabled:", isLoading || !meetingDate);
+            console.log("Meeting date:", meetingDate);
+            console.log("Is loading:", isLoading);
+          }}
           className="bg-[#18181B] hover:bg-[#27272A] text-white min-w-[140px] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (

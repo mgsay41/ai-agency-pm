@@ -52,14 +52,14 @@ export const createProjectSchema = z
     internalNotes: z.string().optional(),
     status: projectStatusEnum,
     priority: priorityEnum,
-    startDate: z.date({
+    startDate: z.coerce.date({
       message: "Please enter a valid start date",
     }),
-    endDate: z.date({
+    endDate: z.coerce.date({
       message: "Please enter a valid end date",
     }),
-    actualStartDate: z.date().optional().nullable(),
-    actualEndDate: z.date().optional().nullable(),
+    actualStartDate: z.coerce.date().optional().nullable(),
+    actualEndDate: z.coerce.date().optional().nullable(),
     estimatedHours: z
       .number({
         message: "Estimated hours must be a number",
@@ -110,10 +110,10 @@ export const updateProjectSchema = z
     internalNotes: z.string().optional().nullable(),
     status: projectStatusEnum.optional(),
     priority: priorityEnum.optional(),
-    startDate: z.date().optional(),
-    endDate: z.date().optional(),
-    actualStartDate: z.date().optional().nullable(),
-    actualEndDate: z.date().optional().nullable(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+    actualStartDate: z.coerce.date().optional().nullable(),
+    actualEndDate: z.coerce.date().optional().nullable(),
     estimatedHours: z
       .number()
       .positive("Estimated hours must be positive")
@@ -206,8 +206,8 @@ export const projectAssignmentSchema = z.object({
     .min(0, "Allocation must be at least 0")
     .max(100, "Allocation must be at most 100")
     .default(100),
-  startDate: z.date().optional().nullable(),
-  endDate: z.date().optional().nullable(),
+  startDate: z.coerce.date().optional().nullable(),
+  endDate: z.coerce.date().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 

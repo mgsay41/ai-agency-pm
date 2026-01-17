@@ -17,22 +17,22 @@ export interface DashboardStats {
   projectsByPriority: Record<string, number>;
   upcomingDeadlines: Array<{
     id: string;
-    project_name: string;
-    end_date: Date;
+    projectName: string;
+    endDate: Date;
     status: string;
     priority: string;
-    client_name: string;
+    clientName: string;
   }>;
 }
 
 export interface Activity {
   id: string;
-  entity_type: string;
-  entity_id: string;
+  entityType: string;
+  entityId: string;
   action: string;
   changes: any;
-  created_at: Date;
-  user: {
+  createdAt: Date;
+  User: {
     id: string;
     name: string;
     email: string;
@@ -161,11 +161,11 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
       projectsByPriority: priorityRecord,
       upcomingDeadlines: upcomingDeadlines.map((project) => ({
         id: project.id,
-        project_name: project.projectName,
-        end_date: project.endDate,
+        projectName: project.projectName,
+        endDate: project.endDate,
         status: project.status,
         priority: project.priority,
-        client_name: project.Client.companyName,
+        clientName: project.Client.companyName,
       })),
     };
   } catch (error) {
@@ -215,12 +215,12 @@ export async function getRecentActivity(
     return {
       activities: activities.map((activity) => ({
         id: activity.id,
-        entity_type: activity.entityType,
-        entity_id: activity.entityId,
+        entityType: activity.entityType,
+        entityId: activity.entityId,
         action: activity.action,
         changes: activity.changes,
-        created_at: activity.createdAt,
-        user: activity.User,
+        createdAt: activity.createdAt,
+        User: activity.User,
       })),
       pagination: {
         page,

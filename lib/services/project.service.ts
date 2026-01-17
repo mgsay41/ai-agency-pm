@@ -15,27 +15,27 @@ export function calculateDuration(
 }
 
 /**
- * Format project data with calculated fields and convert to snake_case for frontend
+ * Format project data with calculated fields keeping camelCase for frontend
  */
 export function formatProjectData(project: any) {
-  // Map camelCase Prisma fields to snake_case for frontend consistency
+  // Map camelCase Prisma fields to camelCase for frontend consistency
   const formatted: any = {
     id: project.id,
-    project_code: project.projectCode,
-    project_name: project.projectName,
-    project_type: project.projectType,
+    projectCode: project.projectCode,
+    projectName: project.projectName,
+    projectType: project.projectType,
     status: project.status,
     priority: project.priority,
     description: project.description,
-    internal_notes: project.internalNotes,
-    start_date: project.startDate,
-    end_date: project.endDate,
-    budget_amount: project.budgetAmount,
-    budget_currency: project.currency,
-    client_id: project.clientId,
-    created_by_id: project.createdBy,
-    created_at: project.createdAt,
-    updated_at: project.updatedAt,
+    internalNotes: project.internalNotes,
+    startDate: project.startDate,
+    endDate: project.endDate,
+    budgetAmount: project.budgetAmount,
+    budgetCurrency: project.currency,
+    clientId: project.clientId,
+    createdById: project.createdBy,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
     durationDays: calculateDuration(
       new Date(project.startDate),
       new Date(project.endDate)
@@ -44,28 +44,28 @@ export function formatProjectData(project: any) {
 
   // Map Client relation if present
   if (project.Client) {
-    formatted.client = {
+    formatted.Client = {
       id: project.Client.id,
-      company_name: project.Client.companyName,
-      client_type: project.Client.clientType,
+      companyName: project.Client.companyName,
+      clientType: project.Client.clientType,
       industry: project.Client.industry,
-      is_active: project.Client.isActive,
+      isActive: project.Client.isActive,
     };
   }
 
   // Map ProjectAssignment relation if present
   if (project.ProjectAssignment) {
-    formatted.assignments = project.ProjectAssignment.map((assignment: any) => ({
+    formatted.ProjectAssignment = project.ProjectAssignment.map((assignment: any) => ({
       id: assignment.id,
-      role_in_project: assignment.roleInProject,
-      allocation_percentage: assignment.allocationPercentage,
-      member: assignment.TeamMember
+      roleInProject: assignment.roleInProject,
+      allocationPercentage: assignment.allocationPercentage,
+      TeamMember: assignment.TeamMember
         ? {
             id: assignment.TeamMember.id,
-            full_name: assignment.TeamMember.fullName,
+            fullName: assignment.TeamMember.fullName,
             email: assignment.TeamMember.email,
-            role_title: assignment.TeamMember.roleTitle,
-            avatar_color: assignment.TeamMember.avatarColor,
+            roleTitle: assignment.TeamMember.roleTitle,
+            avatarColor: assignment.TeamMember.avatarColor,
           }
         : undefined,
     }));

@@ -44,7 +44,7 @@ export const PATCH = withAuth(async (request, { user }) => {
     const validatedData = updateProfileSchema.parse(body);
 
     // Sanitize string inputs
-    const sanitizedData: Record<string, any> = {};
+    const sanitizedData: Record<string, string | null> = {};
     if (validatedData.name !== undefined) {
       sanitizedData.name = sanitizePlainText(validatedData.name);
     }

@@ -26,7 +26,8 @@ export default function ClientsPage() {
 
   useEffect(() => {
     fetchClients();
-  }, [filters, fetchClients]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const handleCreateClient = async (data: ClientFormData) => {
     try {
@@ -34,8 +35,9 @@ export default function ClientsPage() {
       setIsCreateDialogOpen(false);
       toast.success("Client created successfully");
       fetchClients();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create client");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create client";
+      toast.error(message);
     }
   };
 
@@ -48,8 +50,9 @@ export default function ClientsPage() {
       setSelectedClient(null);
       toast.success("Client updated successfully");
       fetchClients();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update client");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update client";
+      toast.error(message);
     }
   };
 
@@ -62,8 +65,9 @@ export default function ClientsPage() {
       setSelectedClient(null);
       toast.success("Client deleted successfully");
       fetchClients();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete client");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to delete client";
+      toast.error(message);
     }
   };
 
@@ -116,7 +120,7 @@ export default function ClientsPage() {
               </div>
               <div className="flex-1 min-h-0">
                 <ClientsGrid
-                  clients={(clients || []) as any}
+                  clients={(clients || []) as ClientGridItem[]}
                   onEdit={handleEdit}
                   onDelete={handleDelete}
                 />

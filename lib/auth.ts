@@ -11,6 +11,24 @@ export const auth = betterAuth({
     requireEmailVerification: false,
     autoSignIn: true,
   },
+  onRequest: async (request, context) => {
+    // Check if this is a signup request
+    if (request.method === "POST" && request.url.includes("/sign-up/email")) {
+      // Check if this is the first user
+      const userCount = await db.user.count();
+
+      if (userCount === 0) {
+        // First user should be ADMIN and not pending
+        context.body = {
+          ...context.body,
+          role: "ADMIN",
+          isPending: false,
+        };
+      }
+    }
+
+    return { request, context };
+  },
   user: {
     additionalFields: {
       role: {
@@ -25,6 +43,12 @@ export const auth = betterAuth({
         returned: true,
       },
       isActive: {
+        type: "boolean",
+        required: false,
+        defaultValue: true,
+        returned: true,
+      },
+      isPending: {
         type: "boolean",
         required: false,
         defaultValue: true,
@@ -46,6 +70,14 @@ export const auth = betterAuth({
     expiresIn: 60 * 60 * 24, // 24 hours
     updateAge: 60 * 60, // Update session every hour
     modelName: "session",
+  },
+  advanced: {
+    // Better Auth has built-in CSRF protection enabled by default
+    // This validates origin header for state-changing requests
+    useSecureCookies: process.env.NODE_ENV === "production",
+    crossSubDomainCookies: {
+      enabled: false,
+    },
   },
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",

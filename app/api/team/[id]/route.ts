@@ -24,7 +24,15 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Team member ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
 
     const teamMember = await db.teamMember.findUnique({
       where: { id },
@@ -91,7 +99,15 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Team member ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
 
     // Check if team member exists
     const existingMember = await db.teamMember.findUnique({
@@ -113,7 +129,7 @@ export async function PUT(
     // Sanitize input to prevent XSS
     const sanitizedData = sanitizeFormData(validatedData, {
       textarea: ["bio"],
-      plainText: ["full_name", "email", "phone", "role_title", "linkedin_url", "github_url"],
+      plainText: ["fullName", "email", "phone", "roleTitle", "linkedinUrl", "githubUrl"],
     });
 
     // If email is being changed, check if it's already in use
@@ -134,30 +150,96 @@ export async function PUT(
     }
 
     // Prepare update data
-    const updateData: any = {};
+    const updateData: {
+      fullName?: string;
+      email?: string;
+      phone?: string | null;
+      roleTitle?: string;
+      department?: string;
+      specialization?: any;
+      skills?: any;
+      hourlyRate?: number | null;
+      currency?: string;
+      employmentType?: string;
+      startDate?: Date | null;
+      status?: string;
+      avatarColor?: string;
+      bio?: string | null;
+      linkedinUrl?: string | null;
+      githubUrl?: string | null;
+    } = {};
 
-    if (sanitizedData.full_name) updateData.fullName = sanitizedData.full_name;
+    if (sanitizedData.fullName) updateData.fullName = sanitizedData.fullName;
     if (sanitizedData.email) updateData.email = sanitizedData.email;
     if (sanitizedData.phone !== undefined) updateData.phone = sanitizedData.phone;
-    if (sanitizedData.role_title) updateData.roleTitle = sanitizedData.role_title;
+    if (sanitizedData.roleTitle) updateData.roleTitle = sanitizedData.roleTitle;
     if (sanitizedData.department) updateData.department = sanitizedData.department;
     if (sanitizedData.specialization !== undefined) updateData.specialization = sanitizedData.specialization;
     if (sanitizedData.skills !== undefined) updateData.skills = sanitizedData.skills;
-    if (sanitizedData.hourly_rate !== undefined) updateData.hourlyRate = sanitizedData.hourly_rate;
+    if (sanitizedData.hourlyRate !== undefined) updateData.hourlyRate = sanitizedData.hourlyRate;
     if (sanitizedData.currency) updateData.currency = sanitizedData.currency;
-    if (sanitizedData.employment_type) updateData.employmentType = sanitizedData.employment_type;
-    if (sanitizedData.start_date !== undefined) updateData.startDate = sanitizedData.start_date;
+    if (sanitizedData.employmentType) updateData.employmentType = sanitizedData.employmentType;
+    if (sanitizedData.startDate !== undefined) updateData.startDate = sanitizedData.startDate;
     if (sanitizedData.status) updateData.status = sanitizedData.status;
-    if (sanitizedData.avatar_color) updateData.avatarColor = sanitizedData.avatar_color;
+    if (sanitizedData.avatarColor) updateData.avatarColor = sanitizedData.avatarColor;
     if (sanitizedData.bio !== undefined) updateData.bio = sanitizedData.bio;
-    if (sanitizedData.linkedin_url !== undefined) updateData.linkedinUrl = sanitizedData.linkedin_url;
-    if (sanitizedData.github_url !== undefined) updateData.githubUrl = sanitizedData.github_url;
+    if (sanitizedData.linkedinUrl !== undefined) updateData.linkedinUrl = sanitizedData.linkedinUrl;
+    if (sanitizedData.githubUrl !== undefined) updateData.githubUrl = sanitizedData.githubUrl;
 
     // Update team member
     const updatedMember = await db.teamMember.update({
       where: { id },
       data: updateData,
     });
+
+    // Handle status change cascading
+    if (sanitizedData.status) {
+      if (sanitizedData.status === "INACTIVE") {
+        // Deactivate all active project assignments
+        await db.projectAssignment.updateMany({
+          where: {
+            memberId: id,
+            isActive: true,
+          },
+          data: {
+            isActive: false,
+            endDate: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+
+        // Log the cascade action
+        await db.activityLog.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId: session.user.id,
+            entityType: "team_member",
+            entityId: id,
+            action: "status_cascade",
+            changes: {
+              status: "INACTIVE",
+              action: "deactivated_all_assignments",
+            },
+          },
+        });
+      } else if (sanitizedData.status === "ON_LEAVE") {
+        // Log status change for project managers to review
+        await db.activityLog.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId: session.user.id,
+            entityType: "team_member",
+            entityId: id,
+            action: "status_cascade",
+            changes: {
+              status: "ON_LEAVE",
+              action: "assignments_need_review",
+              message: "Team member is on leave. Active assignments and action items may need reassignment.",
+            },
+          },
+        });
+      }
+    }
 
     // Log activity
     await db.activityLog.create({
@@ -207,14 +289,22 @@ export async function DELETE(
     }
 
     // Check if user is admin
-    if (session.user.role !== "admin") {
+    if (session.user.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Forbidden: Admin access required" },
         { status: 403 }
       );
     }
 
-    const { id } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Team member ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
 
     // Check if team member exists
     const teamMember = await db.teamMember.findUnique({

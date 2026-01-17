@@ -7,11 +7,10 @@ import { UpcomingDeadlines } from "@/components/dashboard/upcoming-deadlines";
 import type { DashboardStats } from "@/lib/services/dashboard.service";
 
 interface DashboardClientProps {
-  userName: string;
   initialStats: DashboardStats | null;
 }
 
-export function DashboardClient({ userName, initialStats }: DashboardClientProps) {
+export function DashboardClient({ initialStats }: DashboardClientProps) {
   return (
     <div className="space-y-6 sm:space-y-8">
       {/* Stats Cards */}

@@ -73,6 +73,8 @@ export const PROJECT = {
   DEFAULT_CURRENCY: 'USD',
   PROJECT_CODE_LENGTH: 8,
   DEFAULT_ESTIMATED_HOURS: 40,
+  DEFAULT_DURATION_DAYS: 30,
+  MS_PER_DAY: 24 * 60 * 60 * 1000,
 } as const;
 
 // Meeting settings

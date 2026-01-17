@@ -7,10 +7,10 @@ import { logger } from "@/lib/logger";
 export const runtime = "nodejs";
 
 // Define public routes that don't require authentication
-const publicRoutes = ["/login", "/register", "/api/auth"];
+const publicRoutes = ["/login", "/register", "/api/auth", "/pending-approval"];
 
 // Define protected routes that require authentication
-const protectedRoutes = ["/projects", "/clients", "/team", "/meetings", "/settings", "/profile"];
+const protectedRoutes = ["/projects", "/clients", "/team", "/meetings", "/settings", "/profile", "/dashboard"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -52,8 +52,30 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Check if user is pending approval
+  if (session && session.user) {
+    const isPending = (session.user as { isPending?: boolean }).isPending;
+
+    // If user is pending and trying to access protected routes, redirect to pending page
+    if (isPending && (isProtectedRoute || pathname === "/")) {
+      return NextResponse.redirect(new URL("/pending-approval", request.url));
+    }
+
+    // If user is not pending but on pending approval page, redirect to home
+    if (!isPending && pathname === "/pending-approval") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // If accessing auth pages with an active session, redirect to home
   if ((pathname === "/login" || pathname === "/register") && session) {
+    const isPending = session.user ? (session.user as { isPending?: boolean }).isPending : false;
+
+    // If user is pending, redirect to pending approval page
+    if (isPending) {
+      return NextResponse.redirect(new URL("/pending-approval", request.url));
+    }
+
     return NextResponse.redirect(new URL("/", request.url));
   }
 

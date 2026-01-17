@@ -22,7 +22,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Client ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id } = resolvedParams;
 
     // Check if client exists
     const client = await db.client.findUnique({
@@ -63,7 +71,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: clientId } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Client ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id: clientId } = resolvedParams;
     const body = await request.json();
 
     // Check if client exists

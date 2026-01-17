@@ -86,9 +86,9 @@ export function useClients(options?: UseClientsOptions) {
         throw new Error(data.error || "Failed to fetch clients");
       }
 
-      setClients(data.data);
-      if (data.pagination) {
-        setPagination(data.pagination);
+      setClients(data.data.clients || []);
+      if (data.data.pagination) {
+        setPagination(data.data.pagination);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -191,7 +191,7 @@ export function useClientMutations() {
         setError(null);
 
         const response = await fetch(`/api/clients/${id}`, {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
@@ -333,7 +333,7 @@ export function useClientContacts(clientId: string | null) {
         const response = await fetch(
           `/api/clients/${clientId}/contacts/${contactId}`,
           {
-            method: "PUT",
+            method: "PATCH",
             headers: {
               "Content-Type": "application/json",
             },

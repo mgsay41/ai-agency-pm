@@ -53,7 +53,7 @@ export function ProjectFilters({ onFiltersChange }: ProjectFiltersProps) {
       filters.priority = selectedPriorities;
     }
     if (selectedTypes.length > 0 && selectedTypes.length === 1) {
-      filters.project_type = selectedTypes[0];
+      filters.projectType = selectedTypes[0];
     }
 
     onFiltersChange(filters);

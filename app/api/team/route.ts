@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
     // Sanitize input to prevent XSS
     const sanitizedData = sanitizeFormData(validatedData, {
       textarea: ["bio"],
-      plainText: ["full_name", "email", "phone", "role_title", "linkedin_url", "github_url"],
+      plainText: ["fullName", "email", "phone", "roleTitle", "linkedinUrl", "githubUrl"],
     });
 
     // Check if email already exists
@@ -156,22 +156,22 @@ export async function POST(request: NextRequest) {
     const teamMember = await db.teamMember.create({
       data: {
         id: crypto.randomUUID(),
-        fullName: sanitizedData.full_name,
+        fullName: sanitizedData.fullName,
         email: sanitizedData.email,
         phone: sanitizedData.phone,
-        roleTitle: sanitizedData.role_title,
+        roleTitle: sanitizedData.roleTitle,
         department: sanitizedData.department,
         specialization: sanitizedData.specialization || [],
         skills: sanitizedData.skills || [],
-        hourlyRate: sanitizedData.hourly_rate,
+        hourlyRate: sanitizedData.hourlyRate,
         currency: sanitizedData.currency || "USD",
-        employmentType: sanitizedData.employment_type,
-        startDate: sanitizedData.start_date,
-        status: sanitizedData.status || "active",
-        avatarColor: sanitizedData.avatar_color || "#18181B",
+        employmentType: sanitizedData.employmentType,
+        startDate: sanitizedData.startDate,
+        status: sanitizedData.status || "ACTIVE",
+        avatarColor: sanitizedData.avatarColor || "#18181B",
         bio: sanitizedData.bio,
-        linkedinUrl: sanitizedData.linkedin_url,
-        githubUrl: sanitizedData.github_url,
+        linkedinUrl: sanitizedData.linkedinUrl,
+        githubUrl: sanitizedData.githubUrl,
         createdBy: session.user.id,
         updatedAt: new Date(),
       },

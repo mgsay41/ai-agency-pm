@@ -79,15 +79,24 @@ model Client {
   createdAt              DateTime        @default(now())
   updatedAt              DateTime
   createdBy              String?
+  // Soft delete fields
+  deletedAt              DateTime?
+  deletedBy              String?
+  // Ownership transfer fields
+  transferredFrom        String?
+  transferredAt          DateTime?
   User                   User?           @relation(fields: [createdBy], references: [id])
   ClientContact          ClientContact[]
   Project                Project[]
 
   @@index([companyName])
   @@index([isActive])
+  @@index([deletedAt])
+  @@index([createdBy])
   // Composite indexes for common query patterns
   @@index([isActive, clientType])
   @@index([clientSince, isActive])
+  @@index([createdBy, deletedAt])
 }
 
 model ClientContact {
@@ -405,6 +414,7 @@ model User {
   role                                  Role             @default(TEAM_MEMBER)
   phone                                 String?
   isActive                              Boolean          @default(true)
+  isPending                             Boolean          @default(true)
   lastLogin                             DateTime?
   createdAt                             DateTime         @default(now())
   updatedAt                             DateTime
@@ -535,7 +545,7 @@ enum ProjectType {
 enum Role {
   ADMIN
   TEAM_MEMBER
-  CLIENT
+  SALES
 }
 
 enum TaskStatus {

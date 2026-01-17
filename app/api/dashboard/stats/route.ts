@@ -118,11 +118,11 @@ export async function GET(request: NextRequest) {
         }, {} as Record<string, number>),
         upcomingDeadlines: upcomingDeadlines.map((project) => ({
           id: project.id,
-          project_name: project.projectName,
-          end_date: project.endDate,
+          projectName: project.projectName,
+          endDate: project.endDate,
           status: project.status,
           priority: project.priority,
-          client_name: project.Client.companyName,
+          clientName: project.Client.companyName,
         })),
       },
     });

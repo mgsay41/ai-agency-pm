@@ -1,4 +1,3 @@
-import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import {
   clientSchema,
@@ -93,6 +92,7 @@ export const GET = withRole(
             select: {
               id: true,
               status: true,
+              deletedAt: true,
             },
           },
         },
@@ -101,14 +101,16 @@ export const GET = withRole(
       // Transform data to include project counts and clean up relation names
       const transformedClients = clients.map((client) => {
         const { ClientContact, Project, ...rest } = client;
+        // Filter out soft-deleted projects
+        const activeProjects = Project.filter((p) => !p.deletedAt);
         return {
           ...rest,
-          activeProjectsCount: Project.filter((p) => p.status === "ACTIVE")
+          activeProjectsCount: activeProjects.filter((p) => p.status === "ACTIVE")
             .length,
-          totalProjectsCount: Project.length,
+          totalProjectsCount: activeProjects.length,
           primaryContact: ClientContact[0] || null,
           _count: {
-            projects: Project.length,
+            projects: activeProjects.length,
           },
         };
       });

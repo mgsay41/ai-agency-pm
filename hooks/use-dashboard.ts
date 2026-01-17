@@ -13,22 +13,22 @@ interface DashboardStats {
   projectsByPriority: Record<string, number>;
   upcomingDeadlines: Array<{
     id: string;
-    project_name: string;
-    end_date: Date;
+    projectName: string;
+    endDate: Date;
     status: string;
     priority: string;
-    client_name: string;
+    clientName: string;
   }>;
 }
 
 interface Activity {
   id: string;
-  entity_type: string;
-  entity_id: string;
+  entityType: string;
+  entityId: string;
   action: string;
   changes: any;
-  created_at: Date;
-  user: {
+  createdAt: Date;
+  User: {
     id: string;
     name: string;
     email: string;

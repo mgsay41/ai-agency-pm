@@ -21,12 +21,20 @@ export const clientSchema = z.object({
     .optional(),
   website: z
     .string()
-    .refine(
-      (val) => !val || val === "" || z.string().url().safeParse(val).success,
-      "Please enter a valid website URL (e.g., https://example.com)"
-    )
     .optional()
-    .or(z.literal("")),
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Please enter a valid website URL (e.g., https://example.com)"
+    ),
   billingAddress: z.string().optional(),
   timeZone: z.string().max(100).optional(),
   preferredCommunication: z
@@ -36,16 +44,14 @@ export const clientSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   notes: z.string().optional(),
   isActive: z.boolean().default(true),
-  clientSince: z.date().optional(),
+  clientSince: z.coerce.date().optional(),
 });
 
 export type ClientFormData = z.infer<typeof clientSchema>;
 
 // Client contact validation schema
 export const clientContactSchema = z.object({
-  clientId: z.string().refine((val) => z.string().uuid().safeParse(val).success, {
-    message: "Invalid client ID",
-  }),
+  clientId: z.string().min(1, "Client ID is required"),
   isPrimary: z.boolean().default(false),
   contactName: z
     .string({ message: "Contact name is required" })
@@ -72,12 +78,20 @@ export const clientContactSchema = z.object({
     .optional(),
   linkedinUrl: z
     .string()
-    .refine(
-      (val) => !val || val === "" || z.string().url().safeParse(val).success,
-      "Please enter a valid LinkedIn URL (e.g., https://linkedin.com/in/...)"
-    )
     .optional()
-    .or(z.literal("")),
+    .transform((val) => (val?.trim() === "" ? undefined : val))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Please enter a valid LinkedIn URL (e.g., https://linkedin.com/in/...)"
+    ),
   notes: z.string().optional(),
 });
 

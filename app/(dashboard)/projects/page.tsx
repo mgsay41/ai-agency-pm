@@ -24,7 +24,8 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetchProjects(filters);
-  }, [filters, fetchProjects]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const handleCreateProject = async (data: CreateProjectInput) => {
     try {
@@ -32,7 +33,7 @@ export default function ProjectsPage() {
       setIsCreateDialogOpen(false);
       toast.success("Project created successfully");
       fetchProjects(filters);
-    } catch (error) {
+    } catch {
       toast.error("Failed to create project");
     }
   };
@@ -46,7 +47,7 @@ export default function ProjectsPage() {
       setSelectedProject(null);
       toast.success("Project updated successfully");
       fetchProjects(filters);
-    } catch (error) {
+    } catch {
       toast.error("Failed to update project");
     }
   };
@@ -60,7 +61,7 @@ export default function ProjectsPage() {
       setSelectedProject(null);
       toast.success("Project deleted successfully");
       fetchProjects(filters);
-    } catch (error) {
+    } catch {
       toast.error("Failed to delete project");
     }
   };
@@ -146,7 +147,7 @@ export default function ProjectsPage() {
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={handleDeleteProject}
-        itemName={selectedProject?.project_name}
+        itemName={selectedProject?.projectName}
         isLoading={isLoading}
       />
     </div>

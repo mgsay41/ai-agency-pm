@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -31,7 +31,15 @@ export async function GET(
       return unauthorizedError();
     }
 
-    const { id: projectId } = await params;
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Project ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id: projectId } = resolvedParams;
 
     // Check if project exists
     const project = await db.project.findUnique({
@@ -97,7 +105,15 @@ export async function POST(
       return unauthorizedError();
     }
 
-    const { id: projectId } = await params;
+    const resolvedParams = await params;
+    if (!resolvedParams?.id) {
+      return NextResponse.json(
+        { error: "Project ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { id: projectId } = resolvedParams;
 
     // Check if project exists
     const project = await db.project.findUnique({
@@ -138,10 +154,37 @@ export async function POST(
     });
 
     if (existingAssignment) {
-      return handleGenericError(
-        new Error(
-          `${teamMember.fullName} is already assigned as ${validatedData.roleInProject} to this project`
-        )
+      return NextResponse.json(
+        {
+          error: `${teamMember.fullName} is already assigned as ${validatedData.roleInProject} to this project`,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Check total allocation doesn't exceed 100%
+    const currentAllocations = await db.projectAssignment.aggregate({
+      where: {
+        memberId: validatedData.memberId,
+        isActive: true,
+      },
+      _sum: {
+        allocationPercentage: true,
+      },
+    });
+
+    const currentTotal = currentAllocations._sum.allocationPercentage || 0;
+    const newTotal = currentTotal + validatedData.allocationPercentage;
+
+    if (newTotal > 100) {
+      return NextResponse.json(
+        {
+          error: `Team member already allocated ${currentTotal}%. Cannot add ${validatedData.allocationPercentage}% (would exceed 100%)`,
+          currentAllocation: currentTotal,
+          requestedAllocation: validatedData.allocationPercentage,
+          maxAvailable: 100 - currentTotal,
+        },
+        { status: 400 }
       );
     }
 

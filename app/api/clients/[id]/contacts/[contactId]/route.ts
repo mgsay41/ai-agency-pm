@@ -11,8 +11,8 @@ type RouteContext = {
   params: Promise<{ id: string; contactId: string }>;
 };
 
-// PUT update contact
-export async function PUT(request: NextRequest, context: RouteContext) {
+// PATCH update contact
+export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const session = await auth.api.getSession({
       headers: request.headers,
@@ -22,7 +22,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: clientId, contactId } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id || !resolvedParams?.contactId) {
+      return NextResponse.json(
+        { error: "Client ID and Contact ID are required" },
+        { status: 400 }
+      );
+    }
+
+    const { id: clientId, contactId } = resolvedParams;
     const body = await request.json();
 
     // Check if contact exists
@@ -121,7 +129,7 @@ export async function PUT(request: NextRequest, context: RouteContext) {
       );
     }
 
-    logger.error("PUT /api/clients/[id]/contacts/[contactId] error", error, { action: "update_client_contact" });
+    logger.error("PATCH /api/clients/[id]/contacts/[contactId] error", error, { action: "update_client_contact" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -140,7 +148,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: clientId, contactId } = await context.params;
+    const resolvedParams = await context.params;
+    if (!resolvedParams?.id || !resolvedParams?.contactId) {
+      return NextResponse.json(
+        { error: "Client ID and Contact ID are required" },
+        { status: 400 }
+      );
+    }
+
+    const { id: clientId, contactId } = resolvedParams;
 
     // Check if contact exists
     const existingContact = await db.clientContact.findUnique({
@@ -163,9 +179,20 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     }
 
     // Delete contact
-    await db.clientContact.delete({
-      where: { id: contactId },
-    });
+    try {
+      await db.clientContact.delete({
+        where: { id: contactId },
+      });
+    } catch (deleteError: any) {
+      // Handle case where record was already deleted
+      if (deleteError?.code === 'P2025') {
+        return NextResponse.json(
+          { error: "Contact not found or already deleted" },
+          { status: 404 }
+        );
+      }
+      throw deleteError;
+    }
 
     // If this was the primary contact, check if there are other contacts and make one primary
     if (existingContact.isPrimary) {

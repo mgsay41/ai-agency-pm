@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 interface Project {
   id: string;
-  project_name: string;
+  projectName: string;
 }
 
 interface ProjectSelectProps {
@@ -42,7 +42,7 @@ export function ProjectSelect({
       return projects;
     }
     return projects.filter((project) =>
-      project.project_name.toLowerCase().includes(searchTerm.toLowerCase())
+      project.projectName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [projects, searchTerm]);
 
@@ -51,7 +51,7 @@ export function ProjectSelect({
   const displayValue =
     value === NEW_PROJECT_VALUE
       ? "New Project"
-      : selectedProject?.project_name || placeholder;
+      : selectedProject?.projectName || placeholder;
 
   const handleSelect = (projectId: string) => {
     onValueChange(projectId);
@@ -76,10 +76,15 @@ export function ProjectSelect({
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
-        <div className="flex flex-col">
+      <PopoverContent
+        className="w-[400px] p-0 bg-white border border-[#E5E5E5]"
+        align="start"
+        sideOffset={4}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="flex flex-col bg-white">
           {/* Search Input */}
-          <div className="flex items-center border-b border-[#E5E5E5] px-3 py-2">
+          <div className="flex items-center border-b border-[#E5E5E5] px-3 py-2 shrink-0">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <Input
               placeholder="Search projects..."
@@ -90,18 +95,27 @@ export function ProjectSelect({
           </div>
 
           {/* Project List */}
-          <div className="max-h-[200px] overflow-y-auto">
+          <div
+            className="max-h-[300px] overflow-y-scroll overflow-x-hidden [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-[#D4D4D4] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#A3A3A3]"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#D4D4D4 transparent'
+            }}
+            onWheel={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {/* New Project Option - Always at the top */}
             <div
               onClick={() => handleSelect(NEW_PROJECT_VALUE)}
               className={cn(
-                "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-[#FAFAFA] focus:bg-[#FAFAFA]",
+                "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-[#FAFAFA] focus:bg-[#FAFAFA] transition-colors",
                 value === NEW_PROJECT_VALUE && "bg-[#FAFAFA]"
               )}
             >
               <Check
                 className={cn(
-                  "mr-2 h-4 w-4",
+                  "mr-2 h-4 w-4 text-[#171717]",
                   value === NEW_PROJECT_VALUE ? "opacity-100" : "opacity-0"
                 )}
               />
@@ -123,18 +137,18 @@ export function ProjectSelect({
                   key={project.id}
                   onClick={() => handleSelect(project.id)}
                   className={cn(
-                    "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-[#FAFAFA] focus:bg-[#FAFAFA]",
+                    "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-[#FAFAFA] focus:bg-[#FAFAFA] transition-colors",
                     value === project.id && "bg-[#FAFAFA]"
                   )}
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-4 w-4",
+                      "mr-2 h-4 w-4 text-[#171717]",
                       value === project.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  <span className="truncate text-[#171717]">
-                    {project.project_name}
+                  <span className="truncate text-[#171717] font-normal">
+                    {project.projectName}
                   </span>
                 </div>
               ))
@@ -147,7 +161,7 @@ export function ProjectSelect({
 
           {/* Footer - Show count if many projects */}
           {projects.length > 5 && (
-            <div className="border-t border-[#E5E5E5] px-3 py-2 text-xs text-[#A3A3A3]">
+            <div className="border-t border-[#E5E5E5] px-3 py-2 text-xs text-[#A3A3A3] shrink-0 bg-white">
               {filteredProjects.length} of {projects.length} projects
             </div>
           )}

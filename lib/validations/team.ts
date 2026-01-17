@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Team member validation schema
 export const teamMemberSchema = z.object({
-  full_name: z
+  fullName: z
     .string({ message: "Full name is required" })
     .min(1, "Full name cannot be empty")
     .max(255, "Full name must be less than 255 characters")
@@ -18,7 +18,7 @@ export const teamMemberSchema = z.object({
     .max(50, "Phone number must be less than 50 characters")
     .optional()
     .nullable(),
-  role_title: z
+  roleTitle: z
     .string({ message: "Role/title is required" })
     .min(1, "Role/title cannot be empty")
     .max(100, "Role/title must be less than 100 characters")
@@ -45,7 +45,7 @@ export const teamMemberSchema = z.object({
     .array(z.string())
     .optional()
     .default([]),
-  hourly_rate: z
+  hourlyRate: z
     .number({
       message: "Hourly rate must be a number",
     })
@@ -54,17 +54,17 @@ export const teamMemberSchema = z.object({
     .optional()
     .nullable(),
   currency: z.string().length(3).default("USD").optional(),
-  employment_type: z.enum(
+  employmentType: z.enum(
     ["FULL_TIME", "PART_TIME", "CONTRACTOR", "INTERN"],
     {
       message: "Please select an employment type",
     }
   ),
-  start_date: z.coerce.date({
+  startDate: z.coerce.date({
     message: "Please enter a valid start date",
   }).optional().nullable(),
   status: z.enum(["ACTIVE", "ON_LEAVE", "INACTIVE"]).default("ACTIVE"),
-  avatar_color: z
+  avatarColor: z
     .string()
     .regex(/^#[0-9A-Fa-f]{6}$/, "Please enter a valid color (e.g., #FF5733)")
     .default("#18181B")
@@ -74,20 +74,40 @@ export const teamMemberSchema = z.object({
     .max(1000, "Bio must be less than 1,000 characters")
     .optional()
     .nullable(),
-  linkedin_url: z
+  linkedinUrl: z
     .string()
-    .url("Please enter a valid LinkedIn URL (e.g., https://linkedin.com/in/...)")
-    .max(500, "LinkedIn URL must be less than 500 characters")
     .optional()
     .nullable()
-    .or(z.literal("")),
-  github_url: z
+    .transform((val) => (!val || val.trim() === "" ? null : val))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Please enter a valid LinkedIn URL (e.g., https://linkedin.com/in/...)"
+    ),
+  githubUrl: z
     .string()
-    .url("Please enter a valid GitHub URL (e.g., https://github.com/username)")
-    .max(500, "GitHub URL must be less than 500 characters")
     .optional()
     .nullable()
-    .or(z.literal("")),
+    .transform((val) => (!val || val.trim() === "" ? null : val))
+    .refine(
+      (val) => {
+        if (!val) return true;
+        try {
+          new URL(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      "Please enter a valid GitHub URL (e.g., https://github.com/username)"
+    ),
 });
 
 // Type inference

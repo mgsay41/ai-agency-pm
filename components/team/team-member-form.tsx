@@ -49,22 +49,22 @@ export function TeamMemberForm({
   const form = useForm<TeamMemberFormData>({
     resolver: zodResolver(teamMemberSchema) as any,
     defaultValues: {
-      full_name: defaultValues?.fullName || "",
+      fullName: defaultValues?.fullName || "",
       email: defaultValues?.email || "",
       phone: defaultValues?.phone || "",
-      role_title: defaultValues?.roleTitle || "",
+      roleTitle: defaultValues?.roleTitle || "",
       department: defaultValues?.department as any || "DEVELOPMENT",
       specialization: defaultValues?.specialization || [],
       skills: defaultValues?.skills || [],
-      hourly_rate: defaultValues?.hourlyRate || undefined,
+      hourlyRate: defaultValues?.hourlyRate || undefined,
       currency: defaultValues?.currency || "USD",
-      employment_type: defaultValues?.employmentType as any || "FULL_TIME",
-      start_date: defaultValues?.startDate ? new Date(defaultValues.startDate) : undefined,
+      employmentType: defaultValues?.employmentType as any || "FULL_TIME",
+      startDate: defaultValues?.startDate ? new Date(defaultValues.startDate) : undefined,
       status: defaultValues?.status as any || "ACTIVE",
-      avatar_color: defaultValues?.avatarColor || "#18181B",
+      avatarColor: defaultValues?.avatarColor || "#18181B",
       bio: defaultValues?.bio || "",
-      linkedin_url: defaultValues?.linkedinUrl || "",
-      github_url: defaultValues?.githubUrl || "",
+      linkedinUrl: defaultValues?.linkedinUrl || "",
+      githubUrl: defaultValues?.githubUrl || "",
     },
   });
 
@@ -99,17 +99,17 @@ export function TeamMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="full_name">
+            <Label htmlFor="fullName">
               Full Name <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="full_name"
-              {...form.register("full_name")}
+              id="fullName"
+              {...form.register("fullName")}
               className="border-[#E5E5E5]"
             />
-            {form.formState.errors.full_name && (
+            {form.formState.errors.fullName && (
               <p className="text-sm text-[#DC2626]">
-                {form.formState.errors.full_name.message}
+                {form.formState.errors.fullName.message}
               </p>
             )}
           </div>
@@ -143,17 +143,17 @@ export function TeamMemberForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role_title">
+            <Label htmlFor="roleTitle">
               Role/Title <span className="text-red-500">*</span>
             </Label>
             <Input
-              id="role_title"
-              {...form.register("role_title")}
+              id="roleTitle"
+              {...form.register("roleTitle")}
               className="border-[#E5E5E5]"
             />
-            {form.formState.errors.role_title && (
+            {form.formState.errors.roleTitle && (
               <p className="text-sm text-[#DC2626]">
-                {form.formState.errors.role_title.message}
+                {form.formState.errors.roleTitle.message}
               </p>
             )}
           </div>
@@ -187,12 +187,12 @@ export function TeamMemberForm({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="employment_type">
+            <Label htmlFor="employmentType">
               Employment Type <span className="text-red-500">*</span>
             </Label>
             <Select
-              onValueChange={(value) => form.setValue("employment_type", value as any)}
-              defaultValue={form.getValues("employment_type")}
+              onValueChange={(value) => form.setValue("employmentType", value as any)}
+              defaultValue={form.getValues("employmentType")}
             >
               <SelectTrigger className="border-[#E5E5E5]">
                 <SelectValue placeholder="Select type" />
@@ -277,12 +277,12 @@ export function TeamMemberForm({
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="hourly_rate">Hourly Rate</Label>
+            <Label htmlFor="hourlyRate">Hourly Rate</Label>
             <Input
-              id="hourly_rate"
+              id="hourlyRate"
               type="number"
               step="0.01"
-              {...form.register("hourly_rate", { valueAsNumber: true })}
+              {...form.register("hourlyRate", { valueAsNumber: true })}
               className="border-[#E5E5E5]"
             />
           </div>
@@ -318,11 +318,11 @@ export function TeamMemberForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="start_date">Start Date</Label>
+          <Label htmlFor="startDate">Start Date</Label>
           <Input
-            id="start_date"
+            id="startDate"
             type="date"
-            {...form.register("start_date")}
+            {...form.register("startDate")}
             className="border-[#E5E5E5]"
           />
         </div>
@@ -344,32 +344,32 @@ export function TeamMemberForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="linkedin_url">LinkedIn URL</Label>
+            <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
             <Input
-              id="linkedin_url"
+              id="linkedinUrl"
               type="url"
-              {...form.register("linkedin_url")}
+              {...form.register("linkedinUrl")}
               className="border-[#E5E5E5]"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="github_url">GitHub URL</Label>
+            <Label htmlFor="githubUrl">GitHub URL</Label>
             <Input
-              id="github_url"
+              id="githubUrl"
               type="url"
-              {...form.register("github_url")}
+              {...form.register("githubUrl")}
               className="border-[#E5E5E5]"
             />
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="avatar_color">Avatar Color</Label>
+          <Label htmlFor="avatarColor">Avatar Color</Label>
           <Input
-            id="avatar_color"
+            id="avatarColor"
             type="color"
-            {...form.register("avatar_color")}
+            {...form.register("avatarColor")}
             className="border-[#E5E5E5] h-10"
           />
         </div>
