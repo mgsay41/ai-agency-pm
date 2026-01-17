@@ -8,13 +8,8 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
-  Edit,
   ExternalLink,
   MapPin,
-  Users,
-  CheckCircle,
-  Circle,
-  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,8 +21,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useMeetings } from "@/hooks/use-meetings";
-import { meetingTypeLabels, actionItemStatusLabels } from "@/lib/validations/meeting";
-import { MeetingDialog } from "@/components/meetings/meeting-dialog";
+import { meetingTypeLabels } from "@/lib/validations/meeting";
+import { MeetingDetailsForm } from "@/components/meetings/meeting-details-form";
+import { ActionItemsManager } from "@/components/meetings/action-items-manager";
+import { AttendanceManager } from "@/components/meetings/attendance-manager";
+import { NextMeetingForm } from "@/components/meetings/next-meeting-form";
 import { logger } from "@/lib/logger";
 
 // Type definitions
@@ -80,14 +78,20 @@ interface MeetingDetail {
   ActionItem: ActionItem[];
 }
 
+interface TeamMember {
+  id: string;
+  fullName: string;
+}
+
 export default function MeetingDetailPage() {
   const router = useRouter();
   const params = useParams();
   const meetingId = params?.id as string;
 
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const { getMeeting } = useMeetings();
 
   // Helper function to check if text is a URL
@@ -127,26 +131,43 @@ export default function MeetingDetailPage() {
     }
   };
 
+  const fetchTeamMembers = async () => {
+    try {
+      const response = await fetch("/api/team");
+      if (response.ok) {
+        const result = await response.json();
+        // The API returns { success: true, data: { teamMembers: [...], pagination: {...} } }
+        const members = result.data?.teamMembers || [];
+        setTeamMembers(Array.isArray(members) ? members : []);
+      } else {
+        setTeamMembers([]);
+      }
+    } catch (error) {
+      logger.error("Failed to fetch team members", error, { action: "fetch_team_members" });
+      setTeamMembers([]);
+    }
+  };
+
+  const fetchUserRole = async () => {
+    try {
+      const response = await fetch("/api/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setUserRole(data.data?.role || null);
+      }
+    } catch (error) {
+      logger.error("Failed to fetch user role", error, { action: "fetch_user_role" });
+    }
+  };
+
   useEffect(() => {
     if (meetingId) {
       loadMeeting();
+      fetchTeamMembers();
+      fetchUserRole();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meetingId]);
-
-  const handleDownloadTranscript = () => {
-    if (!meeting?.transcript) return;
-
-    const blob = new Blob([meeting.transcript], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `meeting-transcript-${format(new Date(meeting.meetingDate), "yyyy-MM-dd")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   if (isLoading) {
     return (
@@ -176,6 +197,9 @@ export default function MeetingDetailPage() {
     );
   }
 
+  // Check if user can edit (Admin or Sales only)
+  const canEdit = userRole === "ADMIN" || userRole === "SALES";
+
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
@@ -197,13 +221,6 @@ export default function MeetingDetailPage() {
             {format(new Date(meeting.meetingDate), "EEEE, MMMM d, yyyy 'at' h:mm a")}
           </p>
         </div>
-        <Button
-          onClick={() => setDialogOpen(true)}
-          className="bg-[#18181B] hover:bg-[#27272A]"
-        >
-          <Edit className="h-4 w-4 mr-2" />
-          Edit Meeting
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -325,186 +342,49 @@ export default function MeetingDetailPage() {
             </Card>
           )}
 
-          {/* Notes */}
-          {meeting.notes && (
-            <Card className="border-[#E5E5E5]">
-              <CardHeader>
-                <CardTitle className="text-[#171717]">Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#171717] whitespace-pre-wrap">{meeting.notes}</div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Meeting Details Form (Notes, Transcript, Recording URL) */}
+          <MeetingDetailsForm
+            meetingId={meetingId}
+            initialNotes={meeting.notes || ""}
+            initialTranscript={meeting.transcript || ""}
+            initialRecordingUrl={meeting.recordingUrl || ""}
+            canEdit={canEdit}
+            onSuccess={loadMeeting}
+          />
 
-          {/* Transcript */}
-          {meeting.transcript && (
-            <Card className="border-[#E5E5E5]">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-[#171717]">Transcript</CardTitle>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDownloadTranscript}
-                    className="border-[#E5E5E5]"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-[#171717] whitespace-pre-wrap max-h-96 overflow-y-auto p-4 bg-[#FAFAFA] rounded border border-[#E5E5E5]">
-                  {meeting.transcript}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Next Meeting */}
-          {meeting.nextMeetingDate && (
-            <Card className="border-[#E5E5E5]">
-              <CardHeader>
-                <CardTitle className="text-[#171717]">Next Meeting</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-[#A3A3A3]" />
-                  <span className="font-medium text-[#171717]">
-                    {format(new Date(meeting.nextMeetingDate), "EEEE, MMMM d, yyyy 'at' h:mm a")}
-                  </span>
-                </div>
-                {meeting.nextMeetingNotes && (
-                  <p className="text-[#525252]">{meeting.nextMeetingNotes}</p>
-                )}
-              </CardContent>
-            </Card>
-          )}
+          {/* Next Meeting Form */}
+          <NextMeetingForm
+            meetingId={meetingId}
+            initialNextMeetingDate={meeting.nextMeetingDate ? String(meeting.nextMeetingDate) : ""}
+            initialNextMeetingNotes={meeting.nextMeetingNotes || ""}
+            canEdit={canEdit}
+            onSuccess={loadMeeting}
+          />
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Attendees */}
-          <Card className="border-[#E5E5E5]">
-            <CardHeader>
-              <CardTitle className="text-[#171717] flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Attendees ({meeting.MeetingAttendee.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {meeting.MeetingAttendee.map((attendee: MeetingAttendee) => (
-                  <div
-                    key={attendee.id}
-                    className="flex items-center justify-between p-2 rounded border border-[#E5E5E5]"
-                  >
-                    <div className="flex items-center gap-2">
-                      {attendee.attendeeType === "INTERNAL" && attendee.TeamMember ? (
-                        <>
-                          <div
-                            className="h-8 w-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
-                            style={{
-                              backgroundColor: attendee.TeamMember.avatarColor || "#A3A3A3",
-                            }}
-                          >
-                            {attendee.TeamMember.fullName
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="font-medium text-[#171717]">
-                              {attendee.TeamMember.fullName}
-                            </div>
-                            <div className="text-xs text-[#525252]">
-                              {attendee.TeamMember.roleTitle}
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <div>
-                          <div className="font-medium text-[#171717]">
-                            {attendee.externalName}
-                          </div>
-                          <div className="text-xs text-[#525252]">{attendee.externalEmail}</div>
-                        </div>
-                      )}
-                    </div>
-                    {attendee.attended && (
-                      <CheckCircle className="h-4 w-4 text-[#16A34A]" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Attendance Manager - Admin/Sales can edit, Team Members view-only */}
+          <AttendanceManager
+            meetingId={meetingId}
+            initialAttendees={meeting.MeetingAttendee.map(a => ({
+              ...a,
+              attended: a.attended ?? true
+            }))}
+            canEdit={canEdit}
+            onSuccess={loadMeeting}
+          />
 
-          {/* Action Items */}
-          {meeting.ActionItem.length > 0 && (
-            <Card className="border-[#E5E5E5]">
-              <CardHeader>
-                <CardTitle className="text-[#171717]">
-                  Action Items ({meeting.ActionItem.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {meeting.ActionItem.map((item: ActionItem) => (
-                    <div
-                      key={item.id}
-                      className="p-3 rounded border border-[#E5E5E5] space-y-2"
-                    >
-                      <div className="flex items-start gap-2">
-                        {item.status === "COMPLETED" ? (
-                          <CheckCircle className="h-5 w-5 text-[#16A34A] mt-0.5" />
-                        ) : (
-                          <Circle className="h-5 w-5 text-[#A3A3A3] mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <p className="text-[#171717]">{item.description}</p>
-                          {item.TeamMember && (
-                            <p className="text-sm text-[#525252] mt-1">
-                              Assigned to: {item.TeamMember.fullName}
-                            </p>
-                          )}
-                          {item.dueDate && (
-                            <p className="text-sm text-[#525252]">
-                              Due: {format(new Date(item.dueDate), "MMM d, yyyy")}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={
-                          item.status === "COMPLETED"
-                            ? "bg-[#F0FDF4] text-[#16A34A] border-[#16A34A]/20"
-                            : item.status === "IN_PROGRESS"
-                            ? "bg-[#EFF6FF] text-[#2563EB] border-[#2563EB]/20"
-                            : "bg-[#FFF7ED] text-[#EA580C] border-[#EA580C]/20"
-                        }
-                      >
-                        {actionItemStatusLabels[item.status as keyof typeof actionItemStatusLabels]}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Action Items Manager - Admin/Sales can edit, Team Members view-only */}
+          <ActionItemsManager
+            meetingId={meetingId}
+            initialActionItems={meeting.ActionItem}
+            teamMembers={teamMembers}
+            canEdit={canEdit}
+            onSuccess={loadMeeting}
+          />
         </div>
       </div>
-
-      {/* Edit Dialog */}
-      <MeetingDialog
-        meetingId={meetingId}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={loadMeeting}
-      />
     </div>
   );
 }

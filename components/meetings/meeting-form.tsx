@@ -73,7 +73,7 @@ export function MeetingForm({
     reValidateMode: "onSubmit",
     defaultValues: {
       projectId: projectId || defaultValues?.projectId || "",
-      meetingType: defaultValues?.meetingType || "INTERNAL_SYNC",
+      meetingType: defaultValues?.meetingType || "KICKOFF",
       durationMinutes: defaultValues?.durationMinutes,
       locationPlatform: defaultValues?.locationPlatform || "",
       agenda: defaultValues?.agenda || "",
@@ -112,7 +112,7 @@ export function MeetingForm({
 
       reset({
         projectId: projectId || defaultValues?.projectId || "",
-        meetingType: defaultValues?.meetingType || "INTERNAL_SYNC",
+        meetingType: defaultValues?.meetingType || "KICKOFF",
         durationMinutes: defaultValues?.durationMinutes,
         locationPlatform: defaultValues?.locationPlatform || "",
         agenda: defaultValues?.agenda || "",
@@ -151,7 +151,9 @@ export function MeetingForm({
         }
       })
       .catch((error) => {
-        logger.error("Failed to fetch team members", error, { action: "fetch_team_members_for_meeting" });
+        logger.error("Failed to fetch team members", error, {
+          action: "fetch_team_members_for_meeting",
+        });
         setTeamMembers([]);
       });
   }, []);
@@ -170,7 +172,9 @@ export function MeetingForm({
           }
         })
         .catch((error) => {
-          logger.error("Failed to fetch projects", error, { action: "fetch_projects_for_meeting" });
+          logger.error("Failed to fetch projects", error, {
+            action: "fetch_projects_for_meeting",
+          });
           setProjects([]);
         });
     }
@@ -202,18 +206,26 @@ export function MeetingForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(handleFormSubmit, onInvalid)} className="space-y-8">
+    <form
+      onSubmit={handleSubmit(handleFormSubmit, onInvalid)}
+      className="space-y-8"
+    >
       {/* Basic Information */}
       <div className="space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
           <div className="h-8 w-1 bg-[#18181B] rounded-full"></div>
-          <h3 className="text-base font-semibold text-[#171717]">Basic Information</h3>
+          <h3 className="text-base font-semibold text-[#171717]">
+            Basic Information
+          </h3>
         </div>
 
         {/* Project Selection */}
         {!projectId && (
           <div className="space-y-2">
-            <Label htmlFor="projectId" className="text-sm font-medium text-[#171717]">
+            <Label
+              htmlFor="projectId"
+              className="text-sm font-medium text-[#171717]"
+            >
               Project <span className="text-[#DC2626]">*</span>
             </Label>
             <ProjectSelect
@@ -226,7 +238,8 @@ export function MeetingForm({
               <div className="flex items-start gap-2 p-3 bg-[#F0F9FF] border border-[#BFDBFE] rounded-lg">
                 <span className="text-[#2563EB] mt-0.5">ℹ️</span>
                 <p className="text-xs text-[#1E40AF]">
-                  Meeting will be created without a project. You can assign it to a project later by editing the meeting.
+                  Meeting will be created without a project. You can assign it
+                  to a project later by editing the meeting.
                 </p>
               </div>
             )}
@@ -251,7 +264,7 @@ export function MeetingForm({
                   <Button
                     variant="outline"
                     className={`w-full justify-start text-left border-[#E5E5E5] hover:bg-[#FAFAFA] hover:border-[#A3A3A3] ${
-                      !meetingDate ? 'text-[#A3A3A3]' : 'text-[#171717]'
+                      !meetingDate ? "text-[#A3A3A3]" : "text-[#171717]"
                     }`}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
@@ -266,7 +279,10 @@ export function MeetingForm({
                       if (date) {
                         // If there's already a time set, preserve it
                         if (meetingDate) {
-                          date.setHours(meetingDate.getHours(), meetingDate.getMinutes());
+                          date.setHours(
+                            meetingDate.getHours(),
+                            meetingDate.getMinutes()
+                          );
                         } else {
                           // Otherwise set to current time
                           const now = new Date();
@@ -287,7 +303,10 @@ export function MeetingForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="meetingTime" className="text-sm font-medium text-[#171717]">
+              <Label
+                htmlFor="meetingTime"
+                className="text-sm font-medium text-[#171717]"
+              >
                 Meeting Time <span className="text-[#DC2626]">*</span>
               </Label>
               <Input
@@ -297,15 +316,18 @@ export function MeetingForm({
                 disabled={!meetingDate}
                 value={
                   meetingDate
-                    ? `${String(meetingDate.getHours()).padStart(2, "0")}:${String(
-                        meetingDate.getMinutes()
-                      ).padStart(2, "0")}`
+                    ? `${String(meetingDate.getHours()).padStart(
+                        2,
+                        "0"
+                      )}:${String(meetingDate.getMinutes()).padStart(2, "0")}`
                     : ""
                 }
                 onChange={(e) => {
                   if (e.target.value) {
                     const [hours, minutes] = e.target.value.split(":");
-                    const newDate = meetingDate ? new Date(meetingDate) : new Date();
+                    const newDate = meetingDate
+                      ? new Date(meetingDate)
+                      : new Date();
                     newDate.setHours(parseInt(hours), parseInt(minutes));
                     setMeetingDate(newDate);
                   }
@@ -319,7 +341,10 @@ export function MeetingForm({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="durationMinutes" className="text-sm font-medium text-[#171717]">
+              <Label
+                htmlFor="durationMinutes"
+                className="text-sm font-medium text-[#171717]"
+              >
                 Duration (minutes)
               </Label>
               <Input
@@ -338,7 +363,10 @@ export function MeetingForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="locationPlatform" className="text-sm font-medium text-[#171717]">
+              <Label
+                htmlFor="locationPlatform"
+                className="text-sm font-medium text-[#171717]"
+              >
                 Location/Platform
               </Label>
               <Input
@@ -353,7 +381,10 @@ export function MeetingForm({
 
         {/* Meeting Type */}
         <div className="space-y-2">
-          <Label htmlFor="meetingType" className="text-sm font-medium text-[#171717]">
+          <Label
+            htmlFor="meetingType"
+            className="text-sm font-medium text-[#171717]"
+          >
             Meeting Type <span className="text-[#DC2626]">*</span>
           </Label>
           <Select
@@ -384,7 +415,9 @@ export function MeetingForm({
       <div className="space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
           <div className="h-8 w-1 bg-[#18181B] rounded-full"></div>
-          <h3 className="text-base font-semibold text-[#171717] flex-1">Attendees</h3>
+          <h3 className="text-base font-semibold text-[#171717] flex-1">
+            Attendees
+          </h3>
           <Button
             type="button"
             variant="outline"
@@ -409,8 +442,12 @@ export function MeetingForm({
                 <Plus className="h-6 w-6 text-[#A3A3A3]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#171717]">No attendees added yet</p>
-                <p className="text-xs text-[#A3A3A3] mt-1">Add team members or external guests to track attendance</p>
+                <p className="text-sm font-medium text-[#171717]">
+                  No attendees added yet
+                </p>
+                <p className="text-xs text-[#A3A3A3] mt-1">
+                  Add team members or external guests to track attendance
+                </p>
               </div>
               <Button
                 type="button"
@@ -432,7 +469,10 @@ export function MeetingForm({
         ) : (
           <div className="space-y-3">
             {attendeeFields.map((field, index) => (
-              <div key={field.id} className="p-4 border border-[#E5E5E5] rounded-lg space-y-3 bg-white hover:border-[#A3A3A3] transition-colors">
+              <div
+                key={field.id}
+                className="p-4 border border-[#E5E5E5] rounded-lg space-y-3 bg-white hover:border-[#A3A3A3] transition-colors"
+              >
                 <div className="flex items-center justify-between gap-3">
                   <Select
                     value={watch(`attendees.${index}.attendeeType`)}
@@ -462,7 +502,9 @@ export function MeetingForm({
                 {watch(`attendees.${index}.attendeeType`) === "INTERNAL" ? (
                   <Select
                     value={watch(`attendees.${index}.memberId`)}
-                    onValueChange={(value) => setValue(`attendees.${index}.memberId`, value)}
+                    onValueChange={(value) =>
+                      setValue(`attendees.${index}.memberId`, value)
+                    }
                   >
                     <SelectTrigger className="border-[#E5E5E5] hover:border-[#A3A3A3]">
                       <SelectValue placeholder="Select team member" />
@@ -496,10 +538,16 @@ export function MeetingForm({
                     id={`attended-${index}`}
                     checked={watch(`attendees.${index}.attended`)}
                     onCheckedChange={(checked) =>
-                      setValue(`attendees.${index}.attended`, checked as boolean)
+                      setValue(
+                        `attendees.${index}.attended`,
+                        checked as boolean
+                      )
                     }
                   />
-                  <Label htmlFor={`attended-${index}`} className="text-sm font-normal text-[#525252] cursor-pointer">
+                  <Label
+                    htmlFor={`attended-${index}`}
+                    className="text-sm font-normal text-[#525252] cursor-pointer"
+                  >
                     Attended meeting
                   </Label>
                 </div>
@@ -513,11 +561,16 @@ export function MeetingForm({
       <div className="space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
           <div className="h-8 w-1 bg-[#18181B] rounded-full"></div>
-          <h3 className="text-base font-semibold text-[#171717]">Meeting Content</h3>
+          <h3 className="text-base font-semibold text-[#171717]">
+            Meeting Content
+          </h3>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="agenda" className="text-sm font-medium text-[#171717]">
+          <Label
+            htmlFor="agenda"
+            className="text-sm font-medium text-[#171717]"
+          >
             Agenda
           </Label>
           <Textarea
@@ -543,7 +596,10 @@ export function MeetingForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="transcript" className="text-sm font-medium text-[#171717]">
+          <Label
+            htmlFor="transcript"
+            className="text-sm font-medium text-[#171717]"
+          >
             Transcript
           </Label>
           <Textarea
@@ -556,7 +612,10 @@ export function MeetingForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recordingUrl" className="text-sm font-medium text-[#171717]">
+          <Label
+            htmlFor="recordingUrl"
+            className="text-sm font-medium text-[#171717]"
+          >
             Recording URL
           </Label>
           <Input
@@ -573,7 +632,9 @@ export function MeetingForm({
       <div className="space-y-4">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
           <div className="h-8 w-1 bg-[#18181B] rounded-full"></div>
-          <h3 className="text-base font-semibold text-[#171717] flex-1">Action Items</h3>
+          <h3 className="text-base font-semibold text-[#171717] flex-1">
+            Action Items
+          </h3>
           <Button
             type="button"
             variant="outline"
@@ -598,8 +659,12 @@ export function MeetingForm({
                 <Plus className="h-6 w-6 text-[#A3A3A3]" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[#171717]">No action items yet</p>
-                <p className="text-xs text-[#A3A3A3] mt-1">Track tasks and follow-ups from this meeting</p>
+                <p className="text-sm font-medium text-[#171717]">
+                  No action items yet
+                </p>
+                <p className="text-xs text-[#A3A3A3] mt-1">
+                  Track tasks and follow-ups from this meeting
+                </p>
               </div>
               <Button
                 type="button"
@@ -621,7 +686,10 @@ export function MeetingForm({
         ) : (
           <div className="space-y-3">
             {actionItemFields.map((field, index) => (
-              <div key={field.id} className="p-4 border border-[#E5E5E5] rounded-lg space-y-3 bg-white hover:border-[#A3A3A3] transition-colors">
+              <div
+                key={field.id}
+                className="p-4 border border-[#E5E5E5] rounded-lg space-y-3 bg-white hover:border-[#A3A3A3] transition-colors"
+              >
                 <div className="flex items-start gap-2">
                   <Textarea
                     {...register(`actionItems.${index}.description`)}
@@ -642,7 +710,9 @@ export function MeetingForm({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <Label className="text-xs text-[#A3A3A3]">Assigned To</Label>
+                    <Label className="text-xs text-[#A3A3A3]">
+                      Assigned To
+                    </Label>
                     <Select
                       value={watch(`actionItems.${index}.assignedTo`)}
                       onValueChange={(value) =>
@@ -693,21 +763,27 @@ export function MeetingForm({
       <div className="space-y-5">
         <div className="flex items-center gap-3 pb-3 border-b border-[#E5E5E5]">
           <div className="h-8 w-1 bg-[#18181B] rounded-full"></div>
-          <h3 className="text-base font-semibold text-[#171717]">Next Meeting</h3>
+          <h3 className="text-base font-semibold text-[#171717]">
+            Next Meeting
+          </h3>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-[#171717]">Next Meeting Date</Label>
+          <Label className="text-sm font-medium text-[#171717]">
+            Next Meeting Date
+          </Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 className={`w-full justify-start text-left border-[#E5E5E5] hover:bg-[#FAFAFA] hover:border-[#A3A3A3] ${
-                  !nextMeetingDate ? 'text-[#A3A3A3]' : 'text-[#171717]'
+                  !nextMeetingDate ? "text-[#A3A3A3]" : "text-[#171717]"
                 }`}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {nextMeetingDate ? format(nextMeetingDate, "PPP") : "Pick a date (optional)"}
+                {nextMeetingDate
+                  ? format(nextMeetingDate, "PPP")
+                  : "Pick a date (optional)"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0">
@@ -721,7 +797,10 @@ export function MeetingForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="nextMeetingNotes" className="text-sm font-medium text-[#171717]">
+          <Label
+            htmlFor="nextMeetingNotes"
+            className="text-sm font-medium text-[#171717]"
+          >
             Next Meeting Notes
           </Label>
           <Textarea
@@ -763,7 +842,11 @@ export function MeetingForm({
               <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
               Saving...
             </span>
-          ) : defaultValues ? "Update Meeting" : "Create Meeting"}
+          ) : defaultValues ? (
+            "Update Meeting"
+          ) : (
+            "Create Meeting"
+          )}
         </Button>
       </div>
     </form>

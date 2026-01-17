@@ -20,7 +20,6 @@ interface MeetingFiltersType {
 export default function MeetingsPage() {
   const router = useRouter();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingMeetingId, setEditingMeetingId] = useState<string | undefined>();
   const [filters, setFilters] = useState<MeetingFiltersType>({});
 
   const { meetings, isLoading, fetchMeetings, deleteMeeting, pagination } =
@@ -32,11 +31,6 @@ export default function MeetingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  const handleEdit = (meetingId: string) => {
-    setEditingMeetingId(meetingId);
-    setDialogOpen(true);
-  };
-
   const handleView = (meetingId: string) => {
     router.push(`/meetings/${meetingId}`);
   };
@@ -47,7 +41,6 @@ export default function MeetingsPage() {
 
   const handleDialogClose = () => {
     setDialogOpen(false);
-    setEditingMeetingId(undefined);
   };
 
   const handleSuccess = () => {
@@ -65,10 +58,7 @@ export default function MeetingsPage() {
           </p>
         </div>
         <Button
-          onClick={() => {
-            setEditingMeetingId(undefined);
-            setDialogOpen(true);
-          }}
+          onClick={() => setDialogOpen(true)}
           className="bg-[#18181B] hover:bg-[#27272A]"
         >
           <Plus className="h-4 w-4 mr-2" />
@@ -115,7 +105,6 @@ export default function MeetingsPage() {
       {/* Meetings Grid */}
       <MeetingsGrid
         meetings={meetings}
-        onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
         isLoading={isLoading}
@@ -152,9 +141,8 @@ export default function MeetingsPage() {
         </div>
       )}
 
-      {/* Meeting Dialog */}
+      {/* Meeting Dialog - Create only */}
       <MeetingDialog
-        meetingId={editingMeetingId}
         open={dialogOpen}
         onOpenChange={handleDialogClose}
         onSuccess={handleSuccess}

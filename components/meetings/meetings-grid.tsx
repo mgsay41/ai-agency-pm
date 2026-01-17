@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Calendar, Clock, Edit, ExternalLink, FileText, Trash2, Users } from "lucide-react";
+import { Calendar, Clock, ExternalLink, FileText, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -29,7 +29,6 @@ import type { Meeting } from "@/hooks/use-meetings";
 
 interface MeetingsGridProps {
   meetings: Meeting[];
-  onEdit?: (meetingId: string) => void;
   onDelete?: (meetingId: string) => void;
   onView?: (meetingId: string) => void;
   isLoading?: boolean;
@@ -37,7 +36,6 @@ interface MeetingsGridProps {
 
 export function MeetingsGrid({
   meetings,
-  onEdit,
   onDelete,
   onView,
   isLoading,
@@ -196,16 +194,6 @@ export function MeetingsGrid({
                         title="View meeting"
                       >
                         <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onEdit && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(meeting.id)}
-                        title="Edit meeting"
-                      >
-                        <Edit className="h-4 w-4" />
                       </Button>
                     )}
                     {onDelete && (
